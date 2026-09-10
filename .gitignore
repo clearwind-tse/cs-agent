@@ -1,0 +1,215 @@
+# ==================== Python ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# pyenv
+.python-version
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ==================== Virtual Environments ====================
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+pythonenv*/
+.conda/
+
+# ==================== IDE / Editors ====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+.history/
+.cursor/
+
+# ==================== Node.js / Frontend ====================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Frontend build outputs
+frontend/dist/
+frontend/build/
+
+# Frontend cache
+frontend/.cache/
+frontend/.parcel-cache/
+frontend/.vite/
+
+# ==================== Environment & Config ====================
+# Environment variables (包含 API 密钥等敏感信息)
+.env
+.env.local
+.env.*.local
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+
+# Config files with secrets
+*secret*.json
+*credentials*.json
+config.local.*
+
+# ==================== WeChat Data (敏感数据) ====================
+Msg/
+
+# ==================== Model Files & Cache ====================
+backend/.cache/
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pkl
+*.pickle
+*.joblib
+.cache/
+sentence-transformers/
+transformers/
+huggingface/
+
+# ==================== Database ====================
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# PostgreSQL
+*.dump
+db_backup/
+backups/
+backend/agent_cs_playbook.db
+agent_cs_playbook.db
+postgres_data/
+pgdata/
+
+# ==================== Logs ====================
+*.log
+logs/
+*.log.*
+backend/logs/
+frontend/logs/
+
+# ==================== Docker ====================
+docker-compose.override.yml
+
+# ==================== OS Specific ====================
+# macOS
+.DS_Store
+._*
+.AppleDouble
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.fuse_hidden*
+.Trash-*
+.nfs*
+
+# ==================== Temporary Files ====================
+*.tmp
+*.temp
+*.bak
+*.old
+
+# ==================== Export / Generated Files ====================
+exported_data/
+training_data/
+labeled_training_*.json
+wechat_training_*.json
+dataset_*.json
+
+# ==================== AI Agents ====================
+.agent/
+.agents/
+.gemini/
+.worktrees/
+
+# ==================== PaddleOCR / PaddlePaddle ====================
+~/.paddleocr/
+.paddleocr/
+paddle_model/
+inference/
+
+# ==================== WeChat File Storage (音频/图片等大文件) ====================
+FileStorage/
+
+# ==================== 第三方资料（非本仓库授权范围，勿提交）====================
+# 教材原文由金启数智工作室编制并享有著作权，仅限个人学习使用
+Agent客服实战-*.html
+docs/reference/*.pdf
+
+# ==================== 示例/私有数据（勿提交）====================
+# docker/initdb/01-data.sql 是真实聊天记录转储（含 wxid、真实品牌与订单），
+# 仅用于本地演示。后端启动时会 create_all 自动建表，缺此文件不影响跑通。
+docker/initdb/01-data.sql
+backend/workspace/
+backups/
+
+# ==================== Misc ====================
+nohup.out
+.workbuddy/
+.DS_Store
+Msg
+.claude
