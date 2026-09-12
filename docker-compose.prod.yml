@@ -1,0 +1,12 @@
+# 生产环境覆盖配置
+# 用法：docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+services:
+  backend:
+    environment:
+      APP_ENV: prod
+      DEBUG: "false"
+
+  # 生产环境不暴露数据库端口
+  db:
+    ports: !override
+      - "5432"

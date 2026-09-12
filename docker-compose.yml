@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库 (带 pgvector 扩展)
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: agent-cs-playbook-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: agent_cs_playbook
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 后端 API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agent-cs-playbook-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://postgres:123456@db:5432/agent_cs_playbook
+      WECHAT_DB_PATH: /data/wechat
+      VOICE_FILE_PATH: /data/voice
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      DEBUG: "false"
+      APP_ENV: prod
+    volumes:
+      - ./Msg/Msg:/data/wechat:ro
+      - ./FileStorage/Voice:/data/voice:ro
+      - ./scripts:/app/scripts:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 前端
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agent-cs-playbook-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
