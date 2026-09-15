@@ -1,0 +1,52 @@
+[project]
+name = "agent-cs-playbook-backend"
+version = "0.1.0"
+description = "Agent CS Playbook — 客服质检与智能客服 Agent 后端（意图识别 / DST / 情绪 / 工单闭环 / 转人工，基于 deepagents + LangGraph）"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "clearwind" }]
+keywords = ["customer-service", "agent", "deepagents", "langgraph", "intent-recognition", "qa"]
+dependencies = [
+    # Web Framework
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "python-multipart>=0.0.9",
+    # Database
+    "sqlalchemy>=2.0.25",
+    "psycopg2-binary>=2.9.9",
+    "pgvector>=0.2.4",
+    # Configuration
+    "python-dotenv>=1.0.1",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.1.0",
+    # Volcengine TOS (Object Storage)
+    "tos==2.7.1",
+    # HTTP & Embedding & AI
+    "requests>=2.31.0",
+    "numpy>=1.26.0",
+    "openai>=1.0.0",
+    # Agent 编排（LangGraph 替代手写 MainAgent 编排）
+    "langgraph>=1.2.18",
+    "langchain-core>=1.7.3",
+    # deepagents：深度 Agent 框架（规划 write_todos + subagents + 虚拟文件系统），
+    # 客服编排的默认引擎；langchain 1.x 由它带入
+    "deepagents>=0.7.32",
+    "langchain>=1.4.7",
+    "langchain-openai>=1.7.3",
+    # Authentication
+    "python-jose[cryptography]>=3.3.0",
+    "bcrypt>=4.0.0",
+    # AI 打码 (OCR + 图像处理)
+    "rapidocr-onnxruntime>=1.4.0",
+    "opencv-python-headless>=4.8.0",
+    "Pillow>=10.0.0",
+]
+
+[project.scripts]
+dev = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "httpx>=0.26.0",
+]
