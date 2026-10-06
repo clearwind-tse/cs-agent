@@ -1,0 +1,19 @@
+[
+  {
+    "id": "mcp-order-aftersales",
+    "name": "订单与售后MCP服务",
+    "description": "Mock 外部业务系统：订单查询、物流轨迹、退款进度、退货申请、优惠券余额、工单升级",
+    "type": "stdio",
+    "command": "/Users/clearwind/workspace/ai-sale-course/backend/.venv/bin/python",
+    "args": [
+      "/Users/clearwind/workspace/ai-sale-course/backend/workspace/mcp_servers/order_aftersales_mcp.py"
+    ],
+    "url": null,
+    "headers": null,
+    "env": null,
+    "project_id": null,
+    "status": "connected",
+    "created_at": "2026-10-30 21:40:00",
+    "updated_at": "2026-10-31 12:02:42"
+  }
+]
