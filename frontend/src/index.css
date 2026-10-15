@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: linear-gradient(135deg, #0A0A0F 0%, #12121A 50%, #1A1A25 100%);
+  min-height: 100vh;
+  color: #E5E5E5;
+}
+
+/* 防止 flex 子元素溢出 */
+.min-w-0 {
+  min-width: 0;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* 消息气泡动画 */
+.message-bubble {
+  animation: slideUp 0.2s ease-out;
+}
+
+/* 高亮搜索关键词 */
+.search-highlight {
+  background: linear-gradient(120deg, #6366F1 0%, #8B5CF6 100%);
+  color: white;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Toast 通知动画 */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
+/* 搜索跳转高亮闪烁 */
+@keyframes highlightPulse {
+  0%, 100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+  25%, 75% {
+    background-color: rgba(99, 102, 241, 0.15);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1), inset 0 0 20px rgba(99, 102, 241, 0.05);
+  }
+  50% {
+    background-color: rgba(99, 102, 241, 0.25);
+    box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.15), inset 0 0 30px rgba(99, 102, 241, 0.1);
+  }
+}
+
+.message-highlight {
+  animation: highlightPulse 1.5s ease-in-out 2;
+  border-radius: 12px;
+}
