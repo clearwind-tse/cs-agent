@@ -396,79 +396,34 @@ async def process_message_stream(
     db: DBSession = Depends(get_db)
 ):
     """
-    流式处理用户消息（SSE，底层由 LangGraph 编排）
+    流式处理用户消息（SSE，真·逐 token 推送）
 
     协议：
-      metadata  {type, intent, confidence, emotion, emotion_intensity, agent}
+      metadata  {type, intent, confidence, emotion, emotion_intensity, agent, phase, slots, engine}
       token     {type, content}
       answer    {type, content, agent}
-      error     {type, message|content}
-      done      {type, needs_transfer, signals, agent, ticket_no?}
+      error     {type, message}
+      done      {type, needs_transfer, signals, agent, ticket_no?, ticket?, pending_approval, pending}
 
-    说明：LangGraph 同步完成「意图识别→路由→LLM+工具循环→持久化」后，
-    此处以逐段 token 的方式回放答案，保持 SSE 协议与前端兼容。
-    多轮上下文：同样从 DB 载入本会话历史传给 LLM。
+    底层由当前引擎（deepagents / langgraph）的 process_message_stream 真·逐 token 推送：
+    LLM 一边生成一边通过 SSE 下发 token，首字延迟 = 意图识别+路由+首个 token，
+    而非整轮链路（意图→路由→工具循环→生成→落库）跑完再切片回放。
     """
+    import json as _json
     from fastapi.responses import StreamingResponse
 
     history = _load_history(db, request.session_id)
     agent = get_customer_agent(db)
-    try:
-        result = agent.process_message(
+
+    async def event_stream():
+        async for event in agent.process_message_stream(
             message=request.message,
             session_id=request.session_id,
             user_id=request.user_id,
             history=history,
             db=db,
-        )
-    except Exception as exc:
-        import json as _json
-        return StreamingResponse(
-            iter([_json.dumps({"type": "error", "content": str(exc)}, ensure_ascii=False) + "\n\n"]),
-            media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
-        )
-
-    answer = result.get("answer", "（无有效回复）")
-
-    async def event_stream():
-        import json as _json
-
-        # 1. 元信息（含 DST 本轮记住的槽位，前端可直接展示"当前上下文"）
-        yield _json.dumps({
-            "type": "metadata",
-            "intent": result.get("intent"),
-            "confidence": result.get("confidence", 0.0),
-            "emotion": result.get("emotion"),
-            "emotion_intensity": result.get("emotion_intensity", 1),
-            "agent": result.get("agent_name"),
-            "phase": result.get("updated_phase"),
-            "slots": result.get("updated_entities") or {},
-            "engine": result.get("engine") or current_engine(),
-        }, ensure_ascii=False) + "\n\n"
-
-        # 2. 逐段回放答案（token）
-        for piece in _chunk_text(answer):
-            yield _json.dumps({"type": "token", "content": piece}, ensure_ascii=False) + "\n\n"
-
-        # 3. 完整答案
-        yield _json.dumps({
-            "type": "answer",
-            "content": answer,
-            "agent": result.get("agent_name"),
-        }, ensure_ascii=False) + "\n\n"
-
-        # 4. 结束
-        yield _json.dumps({
-            "type": "done",
-            "needs_transfer": result.get("needs_transfer", False),
-            "signals": [],
-            "agent": result.get("agent_name"),
-            "ticket_no": result.get("ticket_no"),
-            "ticket": result.get("ticket"),
-            "pending_approval": bool(result.get("pending_approval")),
-            "pending": result.get("pending"),
-        }, ensure_ascii=False) + "\n\n"
+        ):
+            yield _json.dumps(event, ensure_ascii=False) + "\n\n"
 
     return StreamingResponse(
         event_stream(),
@@ -479,14 +434,6 @@ async def process_message_stream(
             "X-Accel-Buffering": "no",
         },
     )
-
-
-def _chunk_text(text: str, size: int = 12):
-    """把文本按固定长度切片，用于模拟流式输出（中文友好）"""
-    if not text:
-        return
-    for i in range(0, len(text), size):
-        yield text[i:i + size]
 
 
 @router.get("/history/{session_id}")

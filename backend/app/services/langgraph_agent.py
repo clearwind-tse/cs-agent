@@ -52,6 +52,24 @@ BUILTIN_TOOL_NAMES = [
 ]
 
 
+def _extract_chunk_text(chunk) -> str:
+    """从 LangChain 的 chat model stream chunk 里提取文本（兼容 str / 多模态 list）"""
+    if chunk is None:
+        return ""
+    content = getattr(chunk, "content", chunk)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, dict):
+                parts.append(block.get("text", ""))
+            else:
+                parts.append(str(block))
+        return "".join(parts)
+    return ""
+
+
 # ==================== 状态定义 ====================
 
 class AgentState(TypedDict):
@@ -293,7 +311,34 @@ def _build_system_prompt(state: AgentState, agent_cfg: Optional[AgentConfig]) ->
         "绝不能说「已退款/已受理/受理单号是 RMA…」**，也不许自己编 RMA 号。"
         "该工具需要坐席确认，调用后若被告知等待，就告诉客户「已提交坐席确认」。\n"
         "10. 回复 2-4 句，中文，口语化；不要用「亲亲」，不要输出 JSON 或内部字段名。\n"
-    )
+    ) + _build_rag_references(state)
+
+
+def _build_rag_references(state: AgentState) -> str:
+    """
+    把 RAG 检索到的高质量参考话术追加到 system prompt。
+
+    参考话术来自人工审核过的知识条目（is_verified=True），作为类似场景的沟通范例，
+    供 Agent 借鉴话术风格和处理思路。检索由 _prepare_state 完成，结果存在 state["rag_refs"]。
+    """
+    rag_refs = state.get("rag_refs")
+    if not rag_refs:
+        return "\n"
+    lines = ["\n## 参考话术（类似场景的优质沟通范例，仅供参考风格，不要直接复制）\n"]
+    for i, ref in enumerate(rag_refs, 1):
+        scene = ref.get("scene", "")
+        customer_says = ref.get("customer_says", "")
+        response = ref.get("recommended_response", "")
+        key_points = ref.get("key_points", [])
+        lines.append(f"【参考{i}】场景：{scene}")
+        if customer_says:
+            lines.append(f"客户说：{customer_says}")
+        if response:
+            lines.append(f"推荐回复：{response}")
+        if key_points:
+            lines.append(f"要点：{'、'.join(key_points)}")
+        lines.append("")
+    return "\n".join(lines)
 
 
 def _build_tool_context(state: AgentState):
@@ -1048,6 +1093,134 @@ class LangGraphCustomerAgent:
             "ticket_no": (ticket or {}).get("ticket_no"),
             "engine": "langgraph",
         }
+
+    # ============ 真·流式（SSE 逐 token 推送） ============
+    async def process_message_stream(self, *, message, session_id, user_id=None,
+                                     history=None, db=None):
+        """
+        真流式处理：DST 预处理 → 先推 metadata → 编译图 astream_events 逐 token 推送
+        → 收尾（图内部已含质检/转人工/落库）→ 推 answer + done。
+
+        任何异常自动回退到非流式 process_message，保证一定有正确回复。
+        """
+        # ---- 1~5：DST 管道（与 process_message 一致）----
+        dst = dialog_state.load_state(db, session_id)
+        dst.turn_count = (dst.turn_count or 0) + 1
+        if user_id:
+            dst.user_id = user_id
+        if not dst.order_count:
+            dst.order_count = len(order_store.list_recent_orders(dst.user_id))
+        before = _slot_snapshot(dst)
+
+        dialog_state.extract_entities(message, dst)
+        if not dst.order_id and not (dst.refund_reason or dst.issue_desc):
+            dialog_state.llm_extract_entities(message, dst)
+        dialog_state.enrich_order_context(dst)
+
+        raw_history = history or []
+        if dst.turn_count >= 6:
+            _maybe_summarize(dst, raw_history)
+        windowed = dialog_state.trim_history(raw_history, dst.current_intent)
+
+        init_messages = [
+            {"role": h.get("role"), "content": h.get("content", "")} for h in windowed
+        ]
+        init_messages.append({"role": "user", "content": message})
+
+        state = AgentState(
+            messages=init_messages,
+            session_id=session_id,
+            user_id=user_id,
+            user_message=message,
+            intent=dst.current_intent,
+            sub_intent=dst.sub_intent,
+            intent_confidence=dst.intent_confidence,
+            emotion_type=None,
+            emotion_intensity=1,
+            frustration_signals=[],
+            agent_id=None,
+            agent_name=None,
+            entities={},
+            order_info=dst.order_snapshot or {},
+            needs_transfer=False,
+            transfer_reason=None,
+            final_answer=None,
+            sources=[],
+            error=None,
+            dst=dst,
+            dst_context=dst.to_context_string(),
+            db=db,
+        )
+
+        yield {
+            "type": "metadata",
+            "intent": dst.current_intent,
+            "confidence": round(dst.intent_confidence or 0.0, 4),
+            "emotion": None,
+            "emotion_intensity": 1,
+            "agent": None,
+            "phase": dst.phase,
+            "slots": _slot_diff(before, dst) or {},
+            "engine": "langgraph",
+        }
+
+        streamed_any = False
+        try:
+            graph = _get_compiled_graph()
+            config = {"configurable": {"thread_id": f"{session_id}:t{dst.turn_count}"}}
+            final_state = None
+            async for ev in graph.astream_events(state, config, version="v2"):
+                ev_type = ev.get("event")
+                if ev_type == "on_chat_model_stream":
+                    content = _extract_chunk_text(ev.get("data", {}).get("chunk"))
+                    if content:
+                        streamed_any = True
+                        yield {"type": "token", "content": content}
+                elif ev_type == "on_graph_end":
+                    final_state = ev.get("data", {}).get("output")
+
+            if final_state is None:
+                final_state = graph.invoke(state, config)
+
+            answer = (final_state or {}).get("final_answer") or ""
+            ticket = resolve_session_ticket(db, session_id)
+            yield {"type": "answer", "content": answer or "（无有效回复）", "agent": (final_state or {}).get("agent_name")}
+            yield {
+                "type": "done",
+                "needs_transfer": (final_state or {}).get("needs_transfer", False),
+                "signals": [],
+                "agent": (final_state or {}).get("agent_name"),
+                "ticket_no": (ticket or {}).get("ticket_no"),
+                "ticket": ticket,
+                "pending_approval": False,
+                "pending": None,
+            }
+        except Exception as e:
+            import traceback
+            print(f"[LangGraph] stream 失败: {e}\n{traceback.format_exc()}")
+            if not streamed_any:
+                # 早期失败（尚未推任何 token）→ 回退非流式，保证一定有回复
+                try:
+                    result = self.process_message(
+                        message=message, session_id=session_id, user_id=user_id,
+                        history=history, db=db,
+                    )
+                    yield {"type": "answer", "content": result.get("answer", ""), "agent": result.get("agent_name")}
+                    yield {
+                        "type": "done",
+                        "needs_transfer": result.get("needs_transfer", False),
+                        "signals": [],
+                        "agent": result.get("agent_name"),
+                        "ticket_no": result.get("ticket_no"),
+                        "ticket": result.get("ticket"),
+                        "pending_approval": bool(result.get("pending_approval")),
+                        "pending": result.get("pending"),
+                    }
+                    return
+                except Exception as e2:
+                    yield {"type": "error", "message": f"生成异常: {e2}"}
+                    return
+            yield {"type": "error", "message": f"流式中止: {e}"}
 
 
 # 全局入口（无状态，可安全复用）

@@ -14,7 +14,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]  # backend/app/core → ai-sa
 def get_data_root() -> Path:
     """返回 data/ 目录，自动创建"""
     p = PROJECT_ROOT / "data"
-    p.mkdir(exist_ok=True)
+    if not p.exists():
+        p.mkdir(parents=True, exist_ok=True)
     return p
 
 
@@ -22,5 +23,6 @@ def get_data_root() -> Path:
 def get_workspace_root() -> Path:
     """返回 workspace/ 目录（类似 DataClaw），存放 SKILL.md 文件夹"""
     p = PROJECT_ROOT / "workspace"
-    p.mkdir(exist_ok=True)
+    if not p.exists():
+        p.mkdir(parents=True, exist_ok=True)
     return p

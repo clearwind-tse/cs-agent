@@ -298,6 +298,24 @@ def _tool_names_called(messages) -> List[str]:
     return names
 
 
+def _extract_chunk_text(chunk) -> str:
+    """从 LangChain 的 chat model stream chunk 里提取文本（兼容 str / 多模态 list）"""
+    if chunk is None:
+        return ""
+    content = getattr(chunk, "content", chunk)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, dict):
+                parts.append(block.get("text", ""))
+            else:
+                parts.append(str(block))
+        return "".join(parts)
+    return ""
+
+
 def _split_result(result):
     """
     兼容两种返回形态：
@@ -328,6 +346,53 @@ def _find_rma_in_messages(messages) -> Optional[str]:
     return None
 
 
+# ==================== RAG 参考话术检索（Ch5.8 增强）====================
+
+_QUALITY_INTENTS = {"refund_return", "complaint", "coupon_issue", "order_problem", "logistics"}
+
+
+def _retrieve_quality_references(
+    intent: Optional[str],
+    user_message: str,
+    db,
+    top_k: int = 2,
+) -> List[Dict[str, Any]]:
+    """
+    按意图召回高质量参考话术（仅取 is_verified=True 的结构化知识条目），
+    注入到 system prompt 中供 Agent 参考沟通方式。
+
+    触发条件：
+    - intent 属于高复杂度场景（退款/投诉/优惠券/物流）
+    - db 可用（否则静默跳过，不阻断对话）
+    """
+    if not intent or not db:
+        return []
+    # 低复杂度意图（闲聊、普通咨询）不需要参考话术
+    if intent not in _QUALITY_INTENTS:
+        return []
+    try:
+        from app.services.rag import ArticleSearch
+        search = ArticleSearch(db)
+        # 意图标签 + 用户原话作为查询词，命中率更高
+        query = f"{intent} {user_message}"
+        results = search.search(query, limit=top_k * 2)
+        # 只保留人工验证过的条目，质量有保障
+        refs = [
+            {
+                "scene": r["scene"],
+                "customer_says": r.get("customer_says", ""),
+                "recommended_response": r.get("recommended_response", ""),
+                "key_points": r.get("key_points", []),
+            }
+            for r in results
+            if r.get("is_verified") and r.get("recommended_response")
+        ][:top_k]
+        return refs
+    except Exception as e:
+        print(f"[DeepAgent] RAG 参考话术检索失败: {e}")
+        return []
+
+
 # ==================== 编排器 ====================
 
 class DeepAgentCustomerAgent:
@@ -339,11 +404,9 @@ class DeepAgentCustomerAgent:
     构建耗时约 80ms，相对 LLM 生成可忽略，因此不做缓存——避免状态/prompt 串味。
     """
 
-    def process_message(self, message: str, session_id: str,
-                        user_id: Optional[str] = None,
-                        history: Optional[List[Dict[str, str]]] = None,
-                        db=None) -> Dict[str, Any]:
-        # ---- 1~5：与 LangGraph 版完全一致的 DST 管道 ----
+    # ============ 共享：DST 预处理（流式 / 非流式共用） ============
+    def _prepare_state(self, *, message, session_id, user_id, history, db):
+        """步骤 1~5：载状态 → 抽实体 → 意图 → 路由 → 构建 state。流式与非流式共用，避免行为漂移。"""
         dst = dialog_state.load_state(db, session_id)
         dst.turn_count = (dst.turn_count or 0) + 1
         if user_id:
@@ -374,7 +437,14 @@ class DeepAgentCustomerAgent:
             _maybe_summarize(dst, raw_history)
         windowed = dialog_state.trim_history(raw_history, dst.current_intent)
 
-        # ---- 路由：仍由意图决定主 Agent（可解释、可测试）----
+        # RAG 检索：按意图召回高质量参考话术，注入 system prompt（Ch5.8 增强）
+        rag_refs = _retrieve_quality_references(dst.current_intent, message, db, top_k=2)
+        dst.rag_context = "\n".join(
+            f"[{i+1}] {r['customer_says']}\n回复：{r['recommended_response']}"
+            for i, r in enumerate(rag_refs)
+        ) if rag_refs else None
+
+        # 路由：仍由意图决定主 Agent（可解释、可测试）
         registry = get_agent_registry()
         routed = registry.resolve_agent(
             intent=dst.current_intent,
@@ -406,8 +476,26 @@ class DeepAgentCustomerAgent:
             "final_answer": None,
             "dst": dst,
             "dst_context": dst.to_context_string(),
+            "rag_refs": rag_refs,
             "db": db,
         }
+        return {
+            "dst": dst, "intent_result": intent_result, "routed": routed,
+            "agent_id": agent_id, "agent_cfg": agent_cfg, "state": state,
+            "windowed": windowed, "before": before,
+        }
+
+    # ============ 非流式（保留：作回退 / 对照） ============
+    def process_message(self, message: str, session_id: str,
+                        user_id: Optional[str] = None,
+                        history: Optional[List[Dict[str, str]]] = None,
+                        db=None) -> Dict[str, Any]:
+        prep = self._prepare_state(
+            message=message, session_id=session_id, user_id=user_id, history=history, db=db,
+        )
+        dst, intent_result, routed = prep["dst"], prep["intent_result"], prep["routed"]
+        agent_id, agent_cfg = prep["agent_id"], prep["agent_cfg"]
+        state, windowed, before = prep["state"], prep["windowed"], prep["before"]
 
         # ---- 6：deepagents 生成（可能停在审批点）----
         try:
@@ -460,7 +548,7 @@ class DeepAgentCustomerAgent:
         return {
             "answer": answer or "（无有效回复）",
             "intent": dst.current_intent,
-            "confidence": intent_confidence,
+            "confidence": state["intent_confidence"],
             "emotion": intent_result.emotion_type,
             "emotion_intensity": intent_result.emotion_intensity,
             "agent_name": (routed.name if routed else None) or "智能客服助手",
@@ -476,9 +564,148 @@ class DeepAgentCustomerAgent:
             "engine": "deepagents",
         }
 
+    # ============ 真·流式（SSE 逐 token 推送） ============
+    async def process_message_stream(self, *, message, session_id, user_id=None,
+                                     history=None, db=None):
+        """
+        真流式处理：DST 预处理 → 先推 metadata → deepagents astream_events 逐 token 推送
+        → 收尾质量闸门/转人工/建单/落盘 → 推 answer + done。
+
+        与 process_message 的区别：LLM 生成边生成边推，首字延迟 = 意图识别+路由+首个
+        token，而不是整轮链路跑完。任何异常（含 HITL 审批点中断）自动回退到非流式
+        process_message，保证一定有正确回复。
+        """
+        try:
+            prep = self._prepare_state(
+                message=message, session_id=session_id, user_id=user_id, history=history, db=db,
+            )
+        except Exception as e:
+            yield {"type": "error", "message": f"预处理失败: {e}"}
+            return
+
+        dst, intent_result, routed = prep["dst"], prep["intent_result"], prep["routed"]
+        agent_id, agent_cfg = prep["agent_id"], prep["agent_cfg"]
+        state, windowed, before = prep["state"], prep["windowed"], prep["before"]
+
+        # 1. 元信息（LLM 生成前即可给出）
+        yield {
+            "type": "metadata",
+            "intent": dst.current_intent,
+            "confidence": round(state["intent_confidence"], 4),
+            "emotion": intent_result.emotion_type,
+            "emotion_intensity": intent_result.emotion_intensity,
+            "agent": routed.name if routed else None,
+            "phase": dst.phase,
+            "slots": _slot_diff(before, dst) or {},
+            "engine": "deepagents",
+        }
+
+        streamed_any = False
+        try:
+            graph = self._build_graph(
+                state=state, agent_cfg=agent_cfg, agent_id=agent_id, db=db, async_mode=True,
+            )
+            messages = [
+                {"role": h.get("role"), "content": h.get("content", "")} for h in windowed
+            ]
+            messages.append({"role": "user", "content": message})
+            config = {"configurable": {"thread_id": state.get("thread_id") or session_id}}
+
+            called_tools: List[str] = []
+            final_messages = None
+            full_answer = ""
+            async for ev in graph.astream_events({"messages": messages}, config, version="v2"):
+                ev_type = ev.get("event")
+                if ev_type == "on_chat_model_stream":
+                    content = _extract_chunk_text(ev.get("data", {}).get("chunk"))
+                    if content:
+                        streamed_any = True
+                        full_answer += content
+                        yield {"type": "token", "content": content}
+                elif ev_type == "on_tool_end":
+                    name = (ev.get("data") or {}).get("name")
+                    if name:
+                        called_tools.append(name)
+                elif ev_type == "on_graph_end":
+                    final_messages = (ev.get("data") or {}).get("output", {}).get("messages")
+
+            # 优先用 on_graph_end 的权威最终状态；deepagents 在无 checkpointer 时
+            # on_graph_end 可能不携带 messages，此时退回流式累加（即用户实际看到的文本）
+            answer = _last_ai_text(final_messages) if final_messages else full_answer
+            if not answer:
+                raise RuntimeError("stream 未拿到最终答案（可能被审批点中断）")
+
+            # 2. 质量闸门 → 转人工 → 建单 → 落盘（与非流式完全一致）
+            state["messages"] = [{"role": "tool", "name": n} for n in called_tools]
+            answer = _sanitize_answer(answer, state)
+            violation = dialog_state.needs_repair(answer, dst)
+            if violation:
+                repaired = _repair_answer(state, answer, violation)
+                if repaired:
+                    answer = _sanitize_answer(repaired, state)
+            dialog_state.record_asked_slots(answer, dst)
+
+            transfer = _evaluate_transfer(state)
+            state["needs_transfer"] = transfer["needs_transfer"]
+            state["transfer_reason"] = transfer.get("reason")
+            state["final_answer"] = answer
+
+            dst.phase = dst.compute_phase(suggest_transfer=state["needs_transfer"])
+            dialog_state.save_state(db, dst)
+
+            _maybe_auto_ticket(state)
+            _persist(state)
+
+            ticket = resolve_session_ticket(db, session_id)
+
+            yield {"type": "answer", "content": answer or "（无有效回复）", "agent": routed.name if routed else None}
+            yield {
+                "type": "done",
+                "needs_transfer": state["needs_transfer"],
+                "signals": [],
+                "agent": routed.name if routed else None,
+                "ticket_no": (ticket or {}).get("ticket_no"),
+                "ticket": ticket,
+                "pending_approval": False,
+                "pending": None,
+            }
+        except Exception as e:
+            import traceback
+            print(f"[DeepAgent] stream 失败: {e}\n{traceback.format_exc()}")
+            # 未推过 token 的早期失败，或流式中被审批点中断（GraphInterrupt）→ 回退非流式。
+            # 非流式路径带同步 checkpointer，能正确挂起 HITL（pending_approval）并落库。
+            is_interrupt = False
+            try:
+                from langgraph.types import GraphInterrupt
+                is_interrupt = isinstance(e, GraphInterrupt)
+            except Exception:
+                is_interrupt = "interrupt" in str(e).lower()
+            if (not streamed_any) or is_interrupt:
+                try:
+                    result = self.process_message(
+                        message=message, session_id=session_id, user_id=user_id,
+                        history=history, db=db,
+                    )
+                    yield {"type": "answer", "content": result.get("answer", ""), "agent": result.get("agent_name")}
+                    yield {
+                        "type": "done",
+                        "needs_transfer": result.get("needs_transfer", False),
+                        "signals": [],
+                        "agent": result.get("agent_name"),
+                        "ticket_no": result.get("ticket_no"),
+                        "ticket": result.get("ticket"),
+                        "pending_approval": bool(result.get("pending_approval")),
+                        "pending": result.get("pending"),
+                    }
+                    return
+                except Exception as e2:
+                    yield {"type": "error", "message": f"生成异常: {e2}"}
+                    return
+            yield {"type": "error", "message": f"流式中止: {e}"}
+
     # ---------- 构建图（process / resume 共用同一份构建逻辑） ----------
     def _build_graph(self, *, state: Dict[str, Any], agent_cfg: Optional[AgentConfig],
-                     agent_id: Optional[str], db):
+                     agent_id: Optional[str], db, async_mode: bool = False):
         model = _get_chat_model()
         if model is None:
             raise RuntimeError("未配置 LLM（deepseek/openai api key 缺失）")
@@ -514,7 +741,10 @@ class DeepAgentCustomerAgent:
             system_prompt=system_prompt,
             subagents=subagents or None,
             middleware=middleware,
-            checkpointer=get_checkpointer(),
+            # 异步流式路径不能挂「同步」checkpointer：astream_events 会调用
+            # aget_tuple/put，而同步 PostgresSaver 未实现异步方法（NotImplementedError）。
+            # 正常对话无需图级暂停/恢复；HITL 中断会由非流式回退路径（带同步 checkpointer）处理。
+            checkpointer=None if async_mode else get_checkpointer(),
             name=f"xiaocan_cs_{agent_id or 'default'}",
         )
 
