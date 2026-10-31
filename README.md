@@ -73,7 +73,71 @@ flowchart TB
 
 ---
 
-## 3. 一条消息进来之后发生什么
+## 3. 界面一览
+
+以下截图均来自本仓库实际运行画面，对话与数据均为演示数据，不含真实客户信息。
+
+**智能客服工作台**——客户发消息，Agent 识别意图、调用订单/物流/建单/退款工具，每轮回复带意图与情绪徽章；涉及退款的动作挂起等坐席审批：
+
+![智能客服对话](docs/screenshots/agent-chat.png)
+
+工单由 Agent 在对话中自动创建，与产生它的会话关联，坐席在同一工作台内接手：
+
+![工单](docs/screenshots/agent-ticket.png)
+
+<details>
+<summary><b>更多：Skill &amp; MCP 技能管理 / 子 Agent 与工具配置</b></summary>
+
+![Skill & MCP](docs/screenshots/agent-skill.png)
+
+![Agent 配置](docs/screenshots/agent-config.png)
+
+</details>
+
+**数据质检中心**——离线侧的质检产线：会话清洗审核 → 批量质检评分 → AI 与人工标注的校准对比：
+
+![会话清洗与审核](docs/screenshots/qc-clean.png)
+
+![质检评分](docs/screenshots/qc-score.png)
+
+![校准对比](docs/screenshots/qc-calibration.png)
+
+<details>
+<summary><b>更多：会话台 / 全文搜索 / 智能助手 / 知识提炼 / 考核出题 / 数据管理 / 导出</b></summary>
+
+会话台，聊天记录原文浏览：
+
+![会话台](docs/screenshots/chat-home.png)
+
+![聊天记录](docs/screenshots/chat-record.png)
+
+全文搜索聊天记录：
+
+![全文搜索](docs/screenshots/search.png)
+
+智能助手，基于历史对话的 RAG 问答，回答附带参考来源：
+
+![智能助手](docs/screenshots/ai-assistant.png)
+
+AI 知识提炼，从历史对话中提炼可复用的销售话术：
+
+![知识提炼](docs/screenshots/extractor.png)
+
+AI 考核，用标注数据自动出题组织客服实训：
+
+![AI 考核](docs/screenshots/quiz.png)
+
+自定义对话数据管理与训练数据导出（ShareGPT / Alpaca / OpenAI / JSONL / RAG 知识库）：
+
+![自定义对话数据](docs/screenshots/custom-data.png)
+
+![导出](docs/screenshots/export.png)
+
+</details>
+
+---
+
+## 4. 一条消息进来之后发生什么
 
 在线链路（`POST /api/agent/message/stream`，SSE）：
 
@@ -91,7 +155,7 @@ flowchart TB
 
 第 6 步是整条链路里唯一会"卡住"的地方，也是设计上最贵的一步，下面单独讲。
 
-### 3.1 为什么一轮一个 thread
+### 4.1 为什么一轮一个 thread
 
 `thread_id` 不是会话 ID，而是 `session_id:t{turn_count}`。原因用一次对照实验说清楚：
 
@@ -108,7 +172,7 @@ flowchart TB
 不会报错，而是另起一张空图再 interrupt 一次——`interrupts=1`、`messages=[]`、工具没执行，
 一个静默失败的坑。所以挂起时把 `thread_id` 显式写进工单的 `pending_action`，续跑时从工单里取。
 
-### 3.2 审批闸门：interrupt 在中间件里
+### 4.2 审批闸门：interrupt 在中间件里
 
 ```python
 HumanInTheLoopMiddleware(
@@ -138,7 +202,7 @@ HumanInTheLoopMiddleware(
 调 `Command(resume={"decisions": ["approve"]})` → 停住的节点**原地重放**，`interrupt()` 直接返回
 决策值，`submit_refund` 才真正落库出 RMA 号。重复点批准返回 `already_decided`，幂等。
 
-### 3.3 工具矩阵
+### 4.3 工具矩阵
 
 | 来源 | 工具 | 说明 |
 | --- | --- | --- |
@@ -151,7 +215,7 @@ HumanInTheLoopMiddleware(
 
 工具的上下文（`session_id` / `user_id`）由闭包注入，模型看不到也不需要传。
 
-### 3.4 子 Agent 委派
+### 4.4 子 Agent 委派
 
 `create_deep_agent(subagents=[...])` 注册了四个专业 Agent：投诉处理、工单处理、FAQ、多轮对话。
 主 Agent 判断"这活儿不归我"时用 `task(subagent_name)` 委派，而不是在主 prompt 里堆 if/else。
@@ -162,7 +226,7 @@ HumanInTheLoopMiddleware(
 
 ---
 
-## 4. 离线数据闭环
+## 5. 离线数据闭环
 
 质检和知识库不是凭空来的，源头是微信聊天记录：
 
@@ -186,7 +250,7 @@ HumanInTheLoopMiddleware(
 
 ---
 
-## 5. 领域模型
+## 6. 领域模型
 
 当前库 38 张表。`models/` 定义 28 张业务表，另外 10 张分三类，都不在 ORM 里：
 
@@ -213,7 +277,7 @@ HumanInTheLoopMiddleware(
 
 ---
 
-## 6. 技术栈
+## 7. 技术栈
 
 | 层 | 选型 | 备注 |
 | --- | --- | --- |
@@ -231,7 +295,7 @@ HumanInTheLoopMiddleware(
 
 ---
 
-## 7. 目录
+## 8. 目录
 
 ```
 backend/app/
@@ -261,7 +325,7 @@ frontend/src/
 
 ---
 
-## 8. 运行
+## 9. 运行
 
 ### 数据库
 
@@ -309,7 +373,7 @@ npm run dev                          # :3000
 
 ---
 
-## 9. 配置
+## 10. 配置
 
 | 变量 | 作用 | 默认 |
 | --- | --- | --- |
@@ -326,7 +390,7 @@ npm run dev                          # :3000
 
 ---
 
-## 10. 主要接口
+## 11. 主要接口
 
 | 分组 | 端点 | 说明 |
 | --- | --- | --- |
@@ -347,7 +411,7 @@ npm run dev                          # :3000
 
 ---
 
-## 11. 已知限制
+## 12. 已知限制
 
 这些是明确没做的，别以为是 bug：
 
@@ -360,7 +424,7 @@ npm run dev                          # :3000
 
 ---
 
-## 12. 许可证与来源
+## 13. 许可证与来源
 
 - 代码：[Apache-2.0](LICENSE)，第三方资料边界见 [NOTICE](NOTICE)。
 - 作者：[clearwind](https://github.com/clearwind)
