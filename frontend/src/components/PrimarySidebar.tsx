@@ -1,4 +1,4 @@
-import { MessageCircle, Gauge, Edit3, Sparkles, Download, Search, User, LogOut, Lightbulb, ClipboardList, MessageSquare } from 'lucide-react'
+import { MessageCircle, Gauge, Edit3, Sparkles, Search, User, LogOut, Lightbulb, ClipboardList, MessageSquare, GraduationCap } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '../utils'
 import { useAuth } from '../contexts/AuthContext'
@@ -8,12 +8,12 @@ interface PrimarySidebarProps {
   onOpenChat: () => void
   onOpenSearch: () => void
   onOpenAI: () => void
-  onOpenExport: () => void
   onOpenAdmin?: () => void
   onOpenCustom?: () => void
   onOpenExtractor?: () => void
   onOpenQuiz?: () => void
   onOpenAgent?: () => void
+  onOpenTraining?: () => void
   onLoginClick?: () => void
 }
 
@@ -109,12 +109,14 @@ export default function PrimarySidebar(props: PrimarySidebarProps) {
             onClick={props.onOpenAgent}
           />
         )}
-        <NavButton
-          icon={Download}
-          label="导出数据"
-          active={props.currentView === 'export'}
-          onClick={props.onOpenExport}
-        />
+        {props.onOpenTraining && (
+          <NavButton
+            icon={GraduationCap}
+            label="训练数据管理"
+            active={props.currentView === 'training'}
+            onClick={props.onOpenTraining}
+          />
+        )}
       </div>
 
       {/* Bottom Actions */}

@@ -212,3 +212,5 @@ nohup.out
 .DS_Store
 Msg
 .claude
+# vite 开发时产生的临时配置快照
+vite.config.ts.timestamp-*

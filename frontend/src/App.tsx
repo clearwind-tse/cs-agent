@@ -5,13 +5,13 @@ import PrimarySidebar from './components/PrimarySidebar'
 import ChatView from './components/ChatView'
 import SearchView from './components/SearchView'
 import AIChat from './components/AIChat'
-import ExportView from './components/ExportView'
 import AdminView from './components/AdminView'
 import AgentWorkbench from './components/AgentWorkbench'
 import { type AgentSessionData } from './api'
 import CustomDataView from './components/CustomDataView'
 import ExtractorView from './components/ExtractorView'
 import QuizView from './components/QuizView'
+import TrainingView from './components/TrainingView'
 import LoginPage from './components/LoginPage'
 import ToastContainer from './components/Toast'
 import { ToastProvider, useToast } from './contexts/ToastContext'
@@ -146,11 +146,11 @@ function AppContent() {
           onOpenChat={() => openView('chat')}
           onOpenSearch={() => openView('search')}
           onOpenAI={() => openView('ai')}
-          onOpenExport={() => openView('export')}
           onOpenAdmin={() => openView('admin')}
           onOpenCustom={() => openView('custom')}
           onOpenExtractor={() => openView('extractor')}
           onOpenQuiz={() => openView('quiz')}
+          onOpenTraining={() => openView('training')}
           onOpenAgent={() => openView('agent')}
           onLoginClick={() => setShowLogin(true)}
         />
@@ -191,8 +191,6 @@ function AppContent() {
               onClose={() => openView('chat')}
               onJumpToMessage={handleJumpToMessage}
             />
-          ) : viewMode === 'export' ? (
-            <ExportView onClose={() => openView('chat')} />
           ) : viewMode === 'admin' ? (
             <AdminView onClose={() => openView('chat')} />
           ) : viewMode === 'custom' ? (
@@ -201,6 +199,8 @@ function AppContent() {
             <ExtractorView />
           ) : viewMode === 'quiz' ? (
             <QuizView onClose={() => openView('chat')} />
+          ) : viewMode === 'training' ? (
+            <TrainingView />
           ) : selectedSession ? (
             <ChatView
               session={selectedSession}

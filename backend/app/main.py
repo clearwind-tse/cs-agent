@@ -16,7 +16,8 @@ from app.models.user import User
 from app.models.dialogue import DialogueSession, DialogueSet  # noqa: F401  确保 create_all 创建对话实训表
 from app.models.agent_config import AgentConfig, IntentRecord, EmotionRecord, TransferDecision, AgentSession  # noqa: F401  新增子Agent相关模型
 from app.models.ticket import Ticket  # noqa: F401  工单表
-from app.routers import chats, search, knowledge, export, filter, labeling, admin, custom, auth, extractor, quiz, cs_quality, qc_calibration, dialogue, agent, ticket, skills, mcp  # noqa: F401
+from app.models.dpo import DpoPreferencePair, SftTrainingSample, TrainingJob  # noqa: F401  DPO训练数据模型
+from app.routers import chats, search, knowledge, export, filter, labeling, admin, custom, auth, extractor, quiz, cs_quality, qc_calibration, dialogue, agent, ticket, skills, mcp, training  # noqa: F401
 from app.services.schema_sync import ensure_legacy_raw_chat_schema, ensure_ticket_schema
 from app.services.agent_initializer import load_all_agents_from_db
 from app.models.database import get_session_local
@@ -104,6 +105,7 @@ app.include_router(agent.router)  # 新增：子Agent管理路由
 app.include_router(ticket.router)  # 新增：工单管理路由
 app.include_router(skills.router)  # 新增：技能中心路由
 app.include_router(mcp.router)     # 新增：MCP 配置管理路由
+app.include_router(training.router)  # 新增：SFT/DPO 训练数据管理路由
 
 
 @app.get("/")

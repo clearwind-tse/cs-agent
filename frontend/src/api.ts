@@ -1520,3 +1520,215 @@ export async function decideTicketAction(
 }
 
 export default api
+
+// ==================== 训练数据管理 API ====================
+
+// SFT 训练样本
+export interface SftSample {
+  id: string
+  instruction: string
+  output: string
+  category: string
+  quality_score: number
+  created_at: string
+}
+
+export interface SftSamplesResponse {
+  total: number
+  samples: SftSample[]
+}
+
+// DPO 偏好对
+export interface DpoPair {
+  id: string
+  prompt: string
+  business_category: string
+  candidate_count: number
+  annotation_status: string
+  annotated_by: string
+  quality_score: number
+  created_at: string
+}
+
+export interface DpoPairsResponse {
+  total: number
+  pairs: DpoPair[]
+}
+
+export interface DpoRejectedDetail {
+  index: number
+  reply: string
+  error_type: string
+  preference_type: string
+}
+
+export interface DpoPairDetail {
+  id: string
+  prompt: string
+  business_category: string
+  scenario_description: string
+  chosen_reply: string
+  rejected_replies: string[]
+  rejected_details?: DpoRejectedDetail[]
+  preference_type: string
+  annotation_status: string
+  annotated_by: string
+  annotated_at: string
+  annotation_notes: string
+  quality_score: number
+  difficulty_level: string
+  created_at: string
+}
+
+// 训练任务
+export interface TrainingJob {
+  id: number
+  job_type: string
+  job_name: string
+  base_model: string
+  status: string
+  progress: number
+  created_at: string
+}
+
+export interface TrainingStatistics {
+  sft_samples: {
+    total: number
+    approved: number
+  }
+  dpo_pairs: {
+    total: number
+    pending: number
+    annotated: number
+    by_category: Record<string, number>
+  }
+  training_jobs: {
+    total: number
+    completed: number
+  }
+}
+
+// API 函数
+export async function getSftSamples(params?: {
+  category?: string
+  is_approved?: boolean
+  limit?: number
+  offset?: number
+}): Promise<SftSamplesResponse> {
+  const { data } = await api.get('/training/sft/samples', { params })
+  return data
+}
+
+export async function extractSftSamples(params?: {
+  session_id?: string
+  min_quality?: string
+  max_samples?: number
+}): Promise<{ extracted: number; saved: number; message: string }> {
+  const { data } = await api.post('/training/sft/extract', null, { params })
+  return data
+}
+
+export async function exportSftData(params?: {
+  format?: string
+  categories?: string[]
+}): Promise<{ format: string; count: number; data: any[] }> {
+  const { data } = await api.post('/training/sft/export', params)
+  return data
+}
+
+export async function getDpoPairs(params?: {
+  category?: string
+  status?: string
+  limit?: number
+  offset?: number
+}): Promise<DpoPairsResponse> {
+  const { data } = await api.get('/training/dpo/pairs', { params })
+  return data
+}
+
+export async function getDpoPairDetail(pairId: string): Promise<DpoPairDetail> {
+  const { data } = await api.get(`/training/dpo/pairs/${pairId}`)
+  return data
+}
+
+export async function generateDpoPairs(params?: {
+  min_quality?: string
+  max_pairs?: number
+  rejected_per_pair?: number
+}): Promise<{ generated: number; saved: number; message: string }> {
+  const { data } = await api.post('/training/dpo/generate', params)
+  return data
+}
+
+export async function annotateDpoPair(
+  pairId: string,
+  data: { chosen_index: number; annotated_by: string; notes?: string }
+): Promise<{ message: string }> {
+  const { data: response } = await api.post(`/training/dpo/pairs/${pairId}/annotate`, data)
+  return response
+}
+
+export async function exportDpoData(params?: {
+  format?: string
+}): Promise<{ format: string; count: number; data: any[] }> {
+  const { data } = await api.post('/training/dpo/export', params)
+  return data
+}
+
+export async function getDpoStatistics(): Promise<{
+  total: number
+  pending: number
+  annotated: number
+  by_category: Record<string, number>
+}> {
+  const { data } = await api.get('/training/dpo/statistics')
+  return data
+}
+
+export async function createTrainingJob(data: {
+  job_type: string
+  job_name: string
+  base_model?: string
+  dataset_id?: string
+  config?: any
+}): Promise<TrainingJob> {
+  const { data: response } = await api.post('/training/jobs', data)
+  return response
+}
+
+export async function listTrainingJobs(params?: {
+  job_type?: string
+  status?: string
+  limit?: number
+}): Promise<{ total: number; jobs: TrainingJob[] }> {
+  const { data } = await api.get('/training/jobs', { params })
+  return data
+}
+
+export async function getTrainingJob(jobId: string | number): Promise<any> {
+  const { data } = await api.get(`/training/jobs/${jobId}`)
+  return data
+}
+
+export async function updateTrainingJobStatus(
+  jobId: string | number,
+  status: string,
+  progress?: number
+): Promise<{ message: string; status: string }> {
+  const { data } = await api.put(`/training/jobs/${jobId}/status?status=${status}&progress=${progress ?? ''}`)
+  return data
+}
+
+export async function completeTrainingJob(
+  jobId: string | number,
+  metrics: any,
+  modelPath?: string
+): Promise<{ message: string; metrics: any; model_path: string }> {
+  const { data } = await api.put(`/training/jobs/${jobId}/complete`, { metrics, model_path: modelPath })
+  return data
+}
+
+export async function getTrainingStatistics(): Promise<TrainingStatistics> {
+  const { data } = await api.get('/training/statistics')
+  return data
+}

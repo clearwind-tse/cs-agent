@@ -4,7 +4,8 @@ import { cn } from '../utils'
 import axios from 'axios'
 
 interface ExportViewProps {
-  onClose: () => void
+  onClose?: () => void
+  embedded?: boolean
 }
 
 interface ExportFormat {
@@ -94,7 +95,7 @@ const CATEGORIES = [
   { id: 'chitchat', name: '闲聊', icon: '💬' },
 ]
 
-export default function ExportView({ onClose }: ExportViewProps) {
+export default function ExportView({ onClose, embedded = false }: ExportViewProps) {
   // 数据来源: all = 全部(标注+自定义), generated = 仅AI生成
   const [dataSource, setDataSource] = useState<'all' | 'generated'>('all')
 
@@ -346,28 +347,33 @@ export default function ExportView({ onClose }: ExportViewProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-dark-800 animate-fade-in">
-      {/* 头部 */}
-      <header className="h-16 px-6 flex items-center justify-between border-b border-dark-600 bg-dark-800/80 backdrop-blur-sm flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-            <Download size={20} className="text-white" />
+    <div className={cn(
+      "flex flex-col overflow-hidden animate-fade-in",
+      embedded ? "w-full" : "flex-1 h-full bg-dark-800"
+    )}>
+      {/* 头部（嵌入到训练数据管理时不显示独立头部） */}
+      {!embedded && (
+        <header className="h-16 px-6 flex items-center justify-between border-b border-dark-600 bg-dark-800/80 backdrop-blur-sm flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+              <Download size={20} className="text-white" />
+            </div>
+            <div>
+              <h2 className="font-medium text-white">导出训练数据</h2>
+              <p className="text-xs text-gray-500">生成客服 AI 微调数据集</p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-medium text-white">导出训练数据</h2>
-            <p className="text-xs text-gray-500">生成客服 AI 微调数据集</p>
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          className="p-2 rounded-lg hover:bg-dark-600 text-gray-400 hover:text-white transition-colors"
-        >
-          <X size={18} />
-        </button>
-      </header>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-dark-600 text-gray-400 hover:text-white transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </header>
+      )}
 
       {/* 主体内容 */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className={cn("overflow-y-auto", embedded ? "py-2" : "flex-1 p-6")}>
         {step === 'config' ? (
           <div className="max-w-2xl mx-auto space-y-6">
             {/* LLM 任务进度 */}

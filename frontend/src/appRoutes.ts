@@ -3,11 +3,11 @@ export type ViewMode =
   | 'search'
   | 'ai'
   | 'agent'
-  | 'export'
   | 'admin'
   | 'custom'
   | 'extractor'
   | 'quiz'
+  | 'training'
 
 /**
  * 智能客服 Agent 工作台的子页面。
@@ -41,11 +41,11 @@ const VIEW_PATHS: Record<Exclude<ViewMode, 'chat'>, string> = {
   search: '/search',
   ai: '/ai',
   agent: '/agent',
-  export: '/export',
   admin: '/admin',
   custom: '/custom',
   extractor: '/extractor',
   quiz: '/quiz',
+  training: '/training',
 }
 
 export const getViewModeFromPath = (pathname: string): ViewMode => {
@@ -54,6 +54,11 @@ export const getViewModeFromPath = (pathname: string): ViewMode => {
   // 质检已并入「后台管理」，旧深链 /qc 别名到 admin，避免历史链接 404
   if (normalized === '/qc') {
     return 'admin'
+  }
+
+  // 导出数据已合并进「训练数据管理」，旧深链 /export 落到 training 视图
+  if (normalized === '/export') {
+    return 'training'
   }
 
   // /agent 及其子页面（/agent/ticket 等）都属于 Agent 视图
