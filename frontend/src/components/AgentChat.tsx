@@ -52,13 +52,13 @@ interface AgentChatProps {
 }
 
 const EMOTION_COLOR: Record<string, string> = {
-  neutral: 'bg-gray-400',
-  joy: 'bg-green-500',
-  anger: 'bg-red-500',
-  sadness: 'bg-blue-500',
-  fear: 'bg-purple-500',
-  anxiety: 'bg-orange-500',
-  disappointment: 'bg-yellow-600',
+  neutral: 'bg-panel-2',
+  joy: 'bg-ok',
+  anger: 'bg-bad',
+  sadness: 'bg-iris',
+  fear: 'bg-iris',
+  anxiety: 'bg-warn',
+  disappointment: 'bg-warn',
 }
 
 const EMOTION_LABEL: Record<string, string> = {
@@ -72,12 +72,12 @@ const EMOTION_LABEL: Record<string, string> = {
 }
 
 const INTENT_COLOR: Record<string, string> = {
-  faq: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  refund_return: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-  logistics: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-  complaint: 'bg-red-500/20 text-red-300 border-red-500/30',
-  order_inquiry: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-  other: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
+  faq: 'bg-iris/20 text-info border-iris/30',
+  refund_return: 'bg-warn/20 text-warn border-warn/30',
+  logistics: 'bg-iris/20 text-iris border-iris/30',
+  complaint: 'bg-bad/20 text-bad border-bad/30',
+  order_inquiry: 'bg-ok/20 text-ok border-ok/30',
+  other: 'bg-panel-2/20 text-ink border-line/30',
 }
 
 function intentBadgeClass(intent?: string) {
@@ -217,27 +217,27 @@ export default function AgentChat({ session, onClose, onOpenTickets }: AgentChat
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-dark-800 animate-fade-in h-full overflow-hidden">
+    <div className="flex-1 flex flex-col animate-fade-in h-full overflow-hidden">
       {/* 头部 */}
-      <header className="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-dark-600 bg-dark-800/80 backdrop-blur-sm flex-shrink-0">
+      <header className="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-line bg-panel/80 backdrop-blur-sm flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-            <User size={20} className="text-white" />
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-iris to-iris flex items-center justify-center flex-shrink-0">
+            <User size={20} className="text-ink" />
           </div>
           <div className="min-w-0">
-            <h2 className="font-medium text-white truncate">智能客服 Agent</h2>
-            <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">
+            <h2 className="font-medium text-ink truncate">智能客服 Agent</h2>
+            <p className="text-xs text-ink-subtle flex items-center gap-1.5 flex-wrap">
               {session && (
                 <>
                   <span className="truncate">{SESSION_NAME(session)}</span>
-                  <span className="text-gray-700">·</span>
+                  <span className="text-ink-muted">·</span>
                   <span className="flex items-center gap-0.5 truncate">
                     <Hash size={10} />
                     {session.session_id}
                   </span>
                   {session.user_id && (
                     <>
-                      <span className="text-gray-700">·</span>
+                      <span className="text-ink-muted">·</span>
                       <span className="flex items-center gap-0.5">
                         <UserIcon size={10} />
                         {session.user_id}
@@ -246,7 +246,7 @@ export default function AgentChat({ session, onClose, onOpenTickets }: AgentChat
                   )}
                   {session.message_count > 0 && (
                     <>
-                      <span className="text-gray-700">·</span>
+                      <span className="text-ink-muted">·</span>
                       <span className="flex items-center gap-0.5">
                         <Clock size={10} />
                         {session.message_count} 轮
@@ -259,7 +259,7 @@ export default function AgentChat({ session, onClose, onOpenTickets }: AgentChat
             </p>
           </div>
           {streaming && (
-            <span className="ml-2 px-2 py-0.5 text-[10px] rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 animate-pulse flex-shrink-0">
+            <span className="ml-2 px-2 py-0.5 text-[10px] rounded-full bg-iris/20 text-info border border-iris/30 animate-pulse flex-shrink-0">
               处理中
             </span>
           )}
@@ -268,7 +268,7 @@ export default function AgentChat({ session, onClose, onOpenTickets }: AgentChat
           {lastMsg?.needsTransfer && (
             <button
               onClick={() => showToast('已为您转接人工客服，请稍候...', 'info')}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-500/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-bad/20 text-bad border border-bad/30 rounded-lg hover:bg-bad/30 transition-colors"
             >
               <Phone size={14} />
               转人工客服
@@ -276,7 +276,7 @@ export default function AgentChat({ session, onClose, onOpenTickets }: AgentChat
           )}
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-dark-600 text-gray-400 hover:text-white transition-colors"
+            className="p-2 rounded-lg hover:bg-line text-ink-muted hover:text-ink transition-colors"
           >
             <X size={18} />
           </button>
@@ -287,12 +287,14 @@ export default function AgentChat({ session, onClose, onOpenTickets }: AgentChat
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center text-gray-500 max-w-md">
-              <User size={48} className="mx-auto mb-4 opacity-30" />
-              <h3 className="text-lg font-medium text-gray-400 mb-2">智能客服 Agent</h3>
-              <p className="text-sm mb-4">意图识别 · 情绪监控 · 工单闭环 · 五信号转人工</p>
+            <div className="text-center text-ink-subtle max-w-md">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-mint/30 bg-mint/10 shadow-glow">
+                <User size={28} className="text-mint" />
+              </div>
+              <h3 className="font-display text-2xl font-bold tracking-tight text-ink mb-2">智能客服 Agent</h3>
+              <p className="text-sm text-ink-muted mb-4">意图识别 · 情绪监控 · 工单闭环 · 五信号转人工</p>
               <div className="space-y-2 text-left">
-                <p className="text-xs text-gray-600">试试问：</p>
+                <p className="text-xs text-ink-subtle">试试问：</p>
                 {[
                   '我的订单什么时候到？',
                   '我要退款',
@@ -302,7 +304,7 @@ export default function AgentChat({ session, onClose, onOpenTickets }: AgentChat
                   <button
                     key={i}
                     onClick={() => setInput(q)}
-                    className="block w-full px-3 py-2 text-sm text-left text-gray-400 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors"
+                    className="block w-full px-3 py-2 text-sm text-left text-ink-muted bg-panel/60 border border-line rounded-xl hover:border-iris/40 hover:text-ink backdrop-blur-sm transition-all"
                   >
                     {q}
                   </button>
@@ -329,10 +331,10 @@ export default function AgentChat({ session, onClose, onOpenTickets }: AgentChat
 
       {/* 底部信号条（仅最后一轮有信号时展示） */}
       {transferSignals.length > 0 && (
-        <div className="px-4 py-2 border-t border-dark-600 bg-dark-900/60 flex flex-wrap gap-2 items-center text-xs">
-          <span className="text-gray-500">转人工信号：</span>
+        <div className="px-4 py-2 border-t border-line bg-canvas/60 flex flex-wrap gap-2 items-center text-xs">
+          <span className="text-ink-subtle">转人工信号：</span>
           {transferSignals.map((s) => (
-            <span key={s} className="px-2 py-0.5 rounded-full bg-red-500/15 text-red-300 border border-red-500/20">
+            <span key={s} className="px-2 py-0.5 rounded-full bg-bad/15 text-bad border border-bad/20">
               {SIGNAL_LABEL[s] ?? s}
             </span>
           ))}
@@ -340,7 +342,7 @@ export default function AgentChat({ session, onClose, onOpenTickets }: AgentChat
       )}
 
       {/* 输入框 */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-dark-600 flex-shrink-0">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-line flex-shrink-0">
         <div className="flex gap-2 sm:gap-3">
           <input
             type="text"
@@ -348,12 +350,12 @@ export default function AgentChat({ session, onClose, onOpenTickets }: AgentChat
             onChange={(e) => setInput(e.target.value)}
             placeholder="描述您的问题..."
             disabled={busy || streaming}
-            className="flex-1 min-w-0 px-3 sm:px-4 py-3 bg-dark-700 border border-dark-500 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors disabled:opacity-50"
+            className="flex-1 min-w-0 px-3 sm:px-4 py-3 bg-panel-2 border border-line-strong rounded-xl text-ink placeholder-ink-subtle focus:outline-none focus:border-iris/50 transition-colors disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!input.trim() || busy || streaming}
-            className="px-3 sm:px-4 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+            className="px-3 sm:px-4 py-3 bg-iris hover:bg-iris text-ink rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
           >
             <Send size={18} />
           </button>
@@ -361,7 +363,7 @@ export default function AgentChat({ session, onClose, onOpenTickets }: AgentChat
             <button
               type="button"
               onClick={abort}
-              className="px-3 py-3 bg-dark-600 hover:bg-dark-500 text-gray-300 rounded-xl transition-colors flex-shrink-0"
+              className="px-3 py-3 bg-line hover:bg-line-strong text-ink rounded-xl transition-colors flex-shrink-0"
               title="中止"
             >
               <RefreshCw size={18} className={streaming ? 'animate-spin' : ''} />
@@ -384,25 +386,25 @@ function MessageBubble({ message, isStreaming, onOpenTickets }: {
       <div className={cn(
         'w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0',
         isUser
-          ? 'bg-gradient-to-br from-green-500 to-emerald-600'
-          : 'bg-gradient-to-br from-cyan-500 to-blue-600',
+          ? 'bg-gradient-to-br from-mint to-mint'
+          : 'bg-gradient-to-br from-iris to-iris',
       )}>
         {isUser ? (
-          <span className="text-white text-sm font-medium">我</span>
+          <span className="text-ink text-sm font-medium">我</span>
         ) : (
-          <User size={16} className="text-white" />
+          <User size={16} className="text-ink" />
         )}
       </div>
       <div className={cn('flex-1 min-w-0 max-w-[85%]', isUser && 'text-right')}>
         <div className={cn(
           'inline-block px-4 py-3 rounded-2xl text-sm text-left relative',
           isUser
-            ? 'bg-cyan-600 text-white rounded-br-md'
-            : 'bg-dark-600 text-gray-200 rounded-bl-md',
+            ? 'bg-iris text-ink rounded-br-md'
+            : 'bg-line text-ink rounded-bl-md',
         )}>
           <p className="whitespace-pre-wrap break-words">
             {message.content}
-            {isStreaming && <span className="inline-block w-1.5 h-4 bg-cyan-400 ml-0.5 animate-pulse align-middle" />}
+            {isStreaming && <span className="inline-block w-1.5 h-4 bg-iris ml-0.5 animate-pulse align-middle" />}
           </p>
 
           {/* 底部元数据条 */}
@@ -417,8 +419,8 @@ function MessageBubble({ message, isStreaming, onOpenTickets }: {
                 </span>
               )}
               {message.emotion && (
-                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-dark-700 border border-dark-500 text-gray-400">
-                  <span className={cn('w-1.5 h-1.5 rounded-full', EMOTION_COLOR[message.emotion] ?? 'bg-gray-500')} />
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-panel-2 border border-line-strong text-ink-muted">
+                  <span className={cn('w-1.5 h-1.5 rounded-full', EMOTION_COLOR[message.emotion] ?? 'bg-panel-2')} />
                   {EMOTION_LABEL[message.emotion] ?? message.emotion}
                   {message.emotionIntensity != null && `·${message.emotionIntensity}/5`}
                 </span>
@@ -428,19 +430,19 @@ function MessageBubble({ message, isStreaming, onOpenTickets }: {
                 <span
                   key={k}
                   title={`对话状态已记录：${k} = ${v}`}
-                  className="px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/25"
+                  className="px-1.5 py-0.5 rounded bg-iris/10 text-info border border-iris/25"
                 >
                   {k} {String(v).length > 22 ? `${String(v).slice(0, 22)}…` : v}
                 </span>
               ))}
               {message.ticketNo && (
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 flex items-center gap-1">
+                <span className="px-1.5 py-0.5 rounded bg-ok/15 text-ok border border-ok/25 flex items-center gap-1">
                   工单 {message.ticketNo}
                   {message.ticketCategory && ` · ${message.ticketCategory}`}
                   {onOpenTickets && (
                     <button
                       onClick={onOpenTickets}
-                      className="underline underline-offset-2 decoration-emerald-400/40 hover:text-emerald-100"
+                      className="underline underline-offset-2 decoration-ok/40 hover:text-ok"
                     >
                       查看
                     </button>
@@ -451,13 +453,13 @@ function MessageBubble({ message, isStreaming, onOpenTickets }: {
               {message.pendingApproval && (
                 <span
                   title={message.pendingTitle ?? '等待坐席确认后才会执行'}
-                  className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1"
+                  className="px-1.5 py-0.5 rounded bg-warn/15 text-warn border border-warn/30 flex items-center gap-1"
                 >
                   待坐席确认
                   {onOpenTickets && (
                     <button
                       onClick={onOpenTickets}
-                      className="underline underline-offset-2 decoration-amber-400/40 hover:text-amber-100"
+                      className="underline underline-offset-2 decoration-warn/40 hover:text-warn"
                     >
                       去处理
                     </button>

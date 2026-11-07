@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { Plus, Edit2, Trash2, Power, PowerOff, Save, X, Database, Sparkles, Square, Download, XCircle, Eye, CheckCircle2, ChevronDown, ChevronUp, Pencil } from 'lucide-react'
+import { StatCard, ChartFrame, StatusDonut, CategoryBars, toChartData } from './ui'
 import { cn } from '../utils'
 import axios from 'axios'
 import { useToast } from '../contexts/ToastContext'
@@ -451,56 +453,59 @@ export default function CustomDataView() {
   const approvedCount = reviewItems.filter((r) => r.approved).length
 
   return (
-    <div className="h-full flex flex-col bg-dark-900">
+    <div className="h-full flex flex-col">
       {/* 头部 */}
-      <div className="bg-dark-800 border-b border-dark-700 p-6">
+      <div className="bg-panel/50 border-b border-line p-6 backdrop-blur-xl">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-            <Database className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-iris to-flare flex items-center justify-center">
+            <Database className="w-5 h-5 text-ink" />
           </div>
-          <h1 className="text-3xl font-bold text-white">自定义对话数据管理</h1>
+          <h1 className="text-3xl font-bold text-ink">自定义对话数据管理</h1>
         </div>
-        <p className="text-gray-400 mt-2">手动添加高质量对话数据，可直接用于训练导出</p>
+        <p className="text-ink-muted mt-2">手动添加高质量对话数据，可直接用于训练导出</p>
       </div>
 
       {/* 统计卡片 */}
       {stats && (
-        <div className="bg-dark-800 border-b border-dark-700 p-4">
-          <div className="grid grid-cols-5 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-accent-primary">{stats.total}</div>
-              <div className="text-sm text-gray-400">总数</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-400">{stats.active}</div>
-              <div className="text-sm text-gray-400">已启用</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-500">{stats.inactive}</div>
-              <div className="text-sm text-gray-400">已禁用</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-400">
-                {Object.keys(stats.by_category).length}
-              </div>
-              <div className="text-sm text-gray-400">分类数</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-400">
-                {stats.by_quality.high || 0}
-              </div>
-              <div className="text-sm text-gray-400">高质量</div>
-            </div>
+        <div className="px-6 pb-2">
+          <motion.div
+            initial="hidden"
+            animate="show"
+            transition={{ staggerChildren: 0.05 }}
+            className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5"
+          >
+            <StatCard label="总数" value={stats.total} hint="自定义对话" icon={<Database size={17} />} tone="iris" />
+            <StatCard label="已启用" value={stats.active} hint="可用于训练导出" icon={<CheckCircle2 size={17} />} tone="mint" />
+            <StatCard label="已禁用" value={stats.inactive} hint="暂不参与导出" icon={<XCircle size={17} />} tone="flare" />
+            <StatCard label="分类数" value={Object.keys(stats.by_category).length} hint="覆盖业务场景" icon={<Square size={17} />} tone="iris" />
+            <StatCard label="高质量" value={stats.by_quality.high || 0} hint="人工确认高质量" icon={<Sparkles size={17} />} tone="mint" />
+          </motion.div>
+
+          {/* 分布图：来自自定义对话统计接口当前快照 */}
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <ChartFrame title="业务分类分布" subtitle="按对话数 · 当前快照">
+              <CategoryBars
+                data={toChartData(stats.by_category, Object.fromEntries(CATEGORIES.map((c) => [c.id, c.name])))}
+                unit=" 条"
+              />
+            </ChartFrame>
+            <ChartFrame title="质量等级构成" subtitle="按对话数 · 当前快照">
+              <StatusDonut
+                data={toChartData(stats.by_quality, Object.fromEntries(QUALITIES.map((q) => [q.id, q.name])))}
+                centerLabel="对话总数"
+                unit=" 条"
+              />
+            </ChartFrame>
           </div>
         </div>
       )}
 
       {/* 筛选和操作栏 */}
-      <div className="bg-dark-800 border-b border-dark-700 p-4 flex items-center gap-4">
+      <div className="bg-panel/40 border-b border-line p-4 flex items-center gap-4 backdrop-blur-xl">
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          className="px-3 py-2 bg-panel-2 border border-line rounded-lg text-sm text-ink focus:outline-none focus:ring-2 focus:ring-iris"
         >
           <option value="">全部分类</option>
           {CATEGORIES.map((cat) => (
@@ -513,7 +518,7 @@ export default function CustomDataView() {
         <select
           value={filterQuality}
           onChange={(e) => setFilterQuality(e.target.value)}
-          className="px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          className="px-3 py-2 bg-panel-2 border border-line rounded-lg text-sm text-ink focus:outline-none focus:ring-2 focus:ring-iris"
         >
           <option value="">全部质量</option>
           {QUALITIES.map((q) => (
@@ -528,7 +533,7 @@ export default function CustomDataView() {
           onChange={(e) =>
             setFilterActive(e.target.value === '' ? null : e.target.value === 'true')
           }
-          className="px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          className="px-3 py-2 bg-panel-2 border border-line rounded-lg text-sm text-ink focus:outline-none focus:ring-2 focus:ring-iris"
         >
           <option value="">全部状态</option>
           <option value="true">已启用</option>
@@ -539,7 +544,7 @@ export default function CustomDataView() {
 
         <button
           onClick={() => setShowGeneratePanel(true)}
-          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 flex items-center gap-2 transition-all"
+          className="px-4 py-2 bg-gradient-to-r from-iris to-flare text-ink rounded-lg hover:from-iris hover:to-flare flex items-center gap-2 transition-all"
         >
           <Sparkles className="w-4 h-4" />
           AI 批量生成
@@ -551,7 +556,7 @@ export default function CustomDataView() {
             resetForm()
             setShowForm(true)
           }}
-          className="px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-secondary flex items-center gap-2 transition-colors"
+          className="px-4 py-2 bg-iris text-ink rounded-lg hover:bg-flare flex items-center gap-2 transition-colors"
         >
           <Plus className="w-4 h-4" />
           新增对话
@@ -561,35 +566,35 @@ export default function CustomDataView() {
       {/* 对话列表 */}
       <div className="flex-1 overflow-y-auto p-4">
         {loading ? (
-          <div className="text-center py-20 text-gray-500">加载中...</div>
+          <div className="text-center py-20 text-ink-subtle">加载中...</div>
         ) : conversations.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">暂无数据</div>
+          <div className="text-center py-20 text-ink-subtle">暂无数据</div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {conversations.map((conv) => (
               <div
                 key={conv.id}
                 className={cn(
-                  "bg-dark-800 border rounded-xl p-4 transition-all",
-                  conv.is_active ? 'border-dark-700' : 'border-dark-700 opacity-60'
+                  "bg-panel border rounded-xl p-4 transition-all",
+                  conv.is_active ? 'border-panel-2' : 'border-panel-2 opacity-60'
                 )}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-white">
+                      <h3 className="font-medium text-ink">
                         {conv.title || `对话 #${conv.id}`}
                       </h3>
                       <span
                         className={cn(
                           "px-2 py-0.5 text-xs rounded-full font-medium",
                           conv.category === 'savings_explain'
-                            ? 'bg-blue-500/20 text-blue-400'
+                            ? 'bg-iris/20 text-info'
                             : conv.category === 'rebate_query'
-                            ? 'bg-green-500/20 text-green-400'
+                            ? 'bg-ok/20 text-ok'
                             : conv.category === 'complaint'
-                            ? 'bg-red-500/20 text-red-400'
-                            : 'bg-gray-500/20 text-gray-400'
+                            ? 'bg-bad/20 text-bad'
+                            : 'bg-panel-2/20 text-ink-muted'
                         )}
                       >
                         {CATEGORIES.find((c) => c.id === conv.category)?.name || conv.category}
@@ -598,19 +603,19 @@ export default function CustomDataView() {
                         className={cn(
                           "px-2 py-0.5 text-xs rounded-full font-medium",
                           conv.quality === 'high'
-                            ? 'bg-green-500/20 text-green-400'
+                            ? 'bg-ok/20 text-ok'
                             : conv.quality === 'medium'
-                            ? 'bg-yellow-500/20 text-yellow-400'
-                            : 'bg-gray-500/20 text-gray-400'
+                            ? 'bg-warn/20 text-warn'
+                            : 'bg-panel-2/20 text-ink-muted'
                         )}
                       >
                         {QUALITIES.find((q) => q.id === conv.quality)?.name || conv.quality}
                       </span>
                     </div>
                     {conv.description && (
-                      <p className="text-sm text-gray-400 mb-2">{conv.description}</p>
+                      <p className="text-sm text-ink-muted mb-2">{conv.description}</p>
                     )}
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-ink-subtle">
                       {conv.conversation_json.length} 轮对话 · 创建于{' '}
                       {new Date(conv.created_at).toLocaleString('zh-CN')}
                     </div>
@@ -622,8 +627,8 @@ export default function CustomDataView() {
                       className={cn(
                         "p-2 rounded-lg transition-colors",
                         conv.is_active
-                          ? 'text-green-400 hover:bg-green-500/10'
-                          : 'text-gray-500 hover:bg-dark-700'
+                          ? 'text-ok hover:bg-ok/10'
+                          : 'text-ink-subtle hover:bg-panel-2'
                       )}
                       title={conv.is_active ? '禁用' : '启用'}
                     >
@@ -635,14 +640,14 @@ export default function CustomDataView() {
                     </button>
                     <button
                       onClick={() => handleEdit(conv)}
-                      className="p-2 text-accent-primary hover:bg-accent-primary/10 rounded-lg transition-colors"
+                      className="p-2 text-iris hover:bg-iris/10 rounded-lg transition-colors"
                       title="编辑"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(conv.id)}
-                      className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                      className="p-2 text-bad hover:bg-bad/10 rounded-lg transition-colors"
                       title="删除"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -651,9 +656,9 @@ export default function CustomDataView() {
                 </div>
 
                 {/* 对话预览 */}
-                <div className="space-y-2 bg-dark-700 rounded-lg p-3 max-h-60 overflow-y-auto">
+                <div className="space-y-2 bg-panel-2 rounded-lg p-3 max-h-60 overflow-y-auto">
                   {conv.system_prompt && (
-                    <div className="p-2 rounded-lg text-sm bg-purple-500/20 text-purple-300">
+                    <div className="p-2 rounded-lg text-sm bg-iris/20 text-iris">
                       <div className="font-medium text-xs mb-1 opacity-80">系统提示词:</div>
                       <div className="whitespace-pre-wrap">
                         {conv.system_prompt.length > 200
@@ -668,10 +673,10 @@ export default function CustomDataView() {
                       className={cn(
                         "p-2 rounded-lg text-sm",
                         turn.role === 'user'
-                          ? 'bg-blue-500/20 text-blue-300'
+                          ? 'bg-iris/20 text-info'
                           : turn.role === 'assistant'
-                          ? 'bg-green-500/20 text-green-300'
-                          : 'bg-yellow-500/20 text-yellow-300'
+                          ? 'bg-ok/20 text-ok'
+                          : 'bg-warn/20 text-warn'
                       )}
                     >
                       <div className="font-medium text-xs mb-1 opacity-80">
@@ -698,10 +703,10 @@ export default function CustomDataView() {
 
       {/* 创建/编辑表单 Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-dark-700">
-            <div className="sticky top-0 bg-dark-700 border-b border-dark-600 px-6 py-4 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white">
+        <div className="fixed inset-0 bg-scrim/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-panel rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-panel-2">
+            <div className="sticky top-0 bg-panel-2 border-b border-line px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-ink">
                 {editingId ? '编辑对话' : '新增对话'}
               </h2>
               <button
@@ -710,7 +715,7 @@ export default function CustomDataView() {
                   setEditingId(null)
                   resetForm()
                 }}
-                className="p-2 hover:bg-dark-600 rounded-lg text-gray-400 hover:text-white transition-colors"
+                className="p-2 hover:bg-line rounded-lg text-ink-muted hover:text-ink transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -719,39 +724,39 @@ export default function CustomDataView() {
             <div className="p-6 space-y-6">
               {/* 基本信息 */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-ink mb-2">
                   标题（可选）
                 </label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                  className="w-full px-3 py-2 bg-panel-2 border border-line rounded-lg text-ink placeholder-ink-subtle focus:outline-none focus:ring-2 focus:ring-iris"
                   placeholder="为这个对话起一个标题"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-ink mb-2">
                   描述（可选）
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                  className="w-full px-3 py-2 bg-panel-2 border border-line rounded-lg text-ink placeholder-ink-subtle focus:outline-none focus:ring-2 focus:ring-iris"
                   placeholder="描述这个对话的用途或特点"
                   rows={2}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-ink mb-2">
                   系统提示词（可选）
                 </label>
                 <textarea
                   value={formData.systemPrompt}
                   onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                  className="w-full px-3 py-2 bg-panel-2 border border-line rounded-lg text-ink placeholder-ink-subtle focus:outline-none focus:ring-2 focus:ring-iris"
                   placeholder="自定义系统提示词，留空则导出时使用分类默认提示词"
                   rows={3}
                 />
@@ -759,13 +764,13 @@ export default function CustomDataView() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-ink mb-2">
                     分类 *
                   </label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                    className="w-full px-3 py-2 bg-panel-2 border border-line rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-iris"
                   >
                     {CATEGORIES.map((cat) => (
                       <option key={cat.id} value={cat.id}>
@@ -776,13 +781,13 @@ export default function CustomDataView() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-ink mb-2">
                     质量 *
                   </label>
                   <select
                     value={formData.quality}
                     onChange={(e) => setFormData({ ...formData, quality: e.target.value })}
-                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                    className="w-full px-3 py-2 bg-panel-2 border border-line rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-iris"
                   >
                     {QUALITIES.map((q) => (
                       <option key={q.id} value={q.id}>
@@ -796,12 +801,12 @@ export default function CustomDataView() {
               {/* 对话轮次 */}
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <label className="block text-sm font-medium text-gray-300">
+                  <label className="block text-sm font-medium text-ink">
                     对话内容 *（至少 2 轮）
                   </label>
                   <button
                     onClick={addTurn}
-                    className="px-3 py-1 text-sm bg-dark-600 hover:bg-dark-500 text-white rounded-lg flex items-center gap-1 transition-colors"
+                    className="px-3 py-1 text-sm bg-line hover:bg-line-strong text-ink rounded-lg flex items-center gap-1 transition-colors"
                   >
                     <Plus className="w-3 h-3" />
                     添加轮次
@@ -810,10 +815,10 @@ export default function CustomDataView() {
 
                 <div className="space-y-3">
                   {formData.turns.map((turn, idx) => (
-                    <div key={idx} className="border border-dark-600 rounded-lg p-4 bg-dark-700">
+                    <div key={idx} className="border border-line rounded-lg p-4 bg-panel-2">
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-300">
+                          <span className="text-sm font-medium text-ink">
                             第 {idx + 1} 轮
                           </span>
                           <select
@@ -821,7 +826,7 @@ export default function CustomDataView() {
                             onChange={(e) =>
                               updateTurn(idx, 'role', e.target.value)
                             }
-                            className="px-2 py-1 text-sm bg-dark-600 border border-dark-500 rounded text-white focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                            className="px-2 py-1 text-sm bg-line border border-line-strong rounded text-ink focus:outline-none focus:ring-2 focus:ring-iris"
                           >
                             <option value="user">用户</option>
                             <option value="assistant">助手</option>
@@ -831,7 +836,7 @@ export default function CustomDataView() {
                         {formData.turns.length > 2 && (
                           <button
                             onClick={() => removeTurn(idx)}
-                            className="p-1 text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                            className="p-1 text-bad hover:bg-bad/10 rounded transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -840,7 +845,7 @@ export default function CustomDataView() {
                       <textarea
                         value={turn.content}
                         onChange={(e) => updateTurn(idx, 'content', e.target.value)}
-                        className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                        className="w-full px-3 py-2 bg-line border border-line-strong rounded-lg text-ink placeholder-ink-subtle focus:outline-none focus:ring-2 focus:ring-iris"
                         placeholder={`输入${
                           turn.role === 'user'
                             ? '用户'
@@ -857,20 +862,20 @@ export default function CustomDataView() {
             </div>
 
             {/* 底部按钮 */}
-            <div className="sticky bottom-0 bg-dark-700 border-t border-dark-600 px-6 py-4 flex justify-end gap-3">
+            <div className="sticky bottom-0 bg-panel-2 border-t border-line px-6 py-4 flex justify-end gap-3">
               <button
                 onClick={() => {
                   setShowForm(false)
                   setEditingId(null)
                   resetForm()
                 }}
-                className="px-4 py-2 text-white bg-dark-600 hover:bg-dark-500 rounded-lg transition-colors"
+                className="px-4 py-2 text-ink bg-line hover:bg-line-strong rounded-lg transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={editingId ? handleUpdate : handleCreate}
-                className="px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-secondary flex items-center gap-2 transition-colors"
+                className="px-4 py-2 bg-iris text-ink rounded-lg hover:bg-flare flex items-center gap-2 transition-colors"
               >
                 <Save className="w-4 h-4" />
                 {editingId ? '保存修改' : '创建'}
@@ -882,12 +887,12 @@ export default function CustomDataView() {
 
       {/* AI 批量生成面板 */}
       {showGeneratePanel && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl shadow-2xl w-full max-w-lg border border-dark-700">
-            <div className="bg-dark-700 border-b border-dark-600 px-6 py-4 flex justify-between items-center rounded-t-xl">
+        <div className="fixed inset-0 bg-scrim/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-panel rounded-xl shadow-2xl w-full max-w-lg border border-panel-2">
+            <div className="bg-panel-2 border-b border-line px-6 py-4 flex justify-between items-center rounded-t-xl">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-400" />
-                <h2 className="text-xl font-bold text-white">AI 批量生成</h2>
+                <Sparkles className="w-5 h-5 text-iris" />
+                <h2 className="text-xl font-bold text-ink">AI 批量生成</h2>
               </div>
               <button
                 onClick={() => {
@@ -896,7 +901,7 @@ export default function CustomDataView() {
                     setGenerateProgress(null)
                   }
                 }}
-                className="p-2 hover:bg-dark-600 rounded-lg text-gray-400 hover:text-white transition-colors"
+                className="p-2 hover:bg-line rounded-lg text-ink-muted hover:text-ink transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -905,7 +910,7 @@ export default function CustomDataView() {
             <div className="p-6 space-y-5">
               {/* 数量配置 */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-ink mb-2">
                   生成数量
                 </label>
                 <input
@@ -917,13 +922,13 @@ export default function CustomDataView() {
                     setGenerateConfig({ ...generateConfig, targetCount: Number(e.target.value) })
                   }
                   disabled={isPolling}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                  className="w-full px-3 py-2 bg-panel-2 border border-line rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-iris disabled:opacity-50"
                 />
               </div>
 
               {/* 分类选择 */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-ink mb-2">
                   指定分类 (不选 = 全部)
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -935,8 +940,8 @@ export default function CustomDataView() {
                       className={cn(
                         'px-3 py-1.5 text-sm rounded-lg border transition-colors',
                         generateConfig.categories.includes(cat.id)
-                          ? 'bg-purple-500/30 border-purple-500 text-purple-300'
-                          : 'bg-dark-700 border-dark-600 text-gray-400 hover:border-dark-500',
+                          ? 'bg-iris/30 border-iris text-iris'
+                          : 'bg-panel-2 border-line text-ink-muted hover:border-line-strong',
                         isPolling && 'opacity-50 cursor-not-allowed'
                       )}
                     >
@@ -948,20 +953,20 @@ export default function CustomDataView() {
 
               {/* 进度显示 */}
               {generateProgress && (
-                <div className="bg-dark-700 rounded-lg p-4 space-y-3">
+                <div className="bg-panel-2 rounded-lg p-4 space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">
+                    <span className="text-ink-muted">
                       {generateProgress.is_running ? '生成中...' : '生成完成'}
                     </span>
-                    <span className="text-white">
+                    <span className="text-ink">
                       {generateProgress.completed} / {generateProgress.total}
                     </span>
                   </div>
 
                   {/* 进度条 */}
-                  <div className="w-full bg-dark-600 rounded-full h-2.5">
+                  <div className="w-full bg-line rounded-full h-2.5">
                     <div
-                      className="bg-gradient-to-r from-purple-500 to-pink-500 h-2.5 rounded-full transition-all duration-300"
+                      className="bg-gradient-to-r from-iris to-flare h-2.5 rounded-full transition-all duration-300"
                       style={{
                         width: `${generateProgress.total > 0 ? (generateProgress.completed / generateProgress.total) * 100 : 0}%`,
                       }}
@@ -971,27 +976,27 @@ export default function CustomDataView() {
                   {/* 统计 */}
                   <div className="grid grid-cols-3 gap-3 text-center">
                     <div>
-                      <div className="text-lg font-bold text-green-400">
+                      <div className="text-lg font-bold text-ok">
                         {generateProgress.passed}
                       </div>
-                      <div className="text-xs text-gray-500">通过校验</div>
+                      <div className="text-xs text-ink-subtle">通过校验</div>
                     </div>
                     <div>
-                      <div className="text-lg font-bold text-red-400">
+                      <div className="text-lg font-bold text-bad">
                         {generateProgress.failed}
                       </div>
-                      <div className="text-xs text-gray-500">未通过</div>
+                      <div className="text-xs text-ink-subtle">未通过</div>
                     </div>
                     <div>
-                      <div className="text-lg font-bold text-gray-400">
+                      <div className="text-lg font-bold text-ink-muted">
                         {generateProgress.total - generateProgress.completed}
                       </div>
-                      <div className="text-xs text-gray-500">剩余</div>
+                      <div className="text-xs text-ink-subtle">剩余</div>
                     </div>
                   </div>
 
                   {generateProgress.error_count > 0 && (
-                    <div className="text-xs text-red-400 mt-1">
+                    <div className="text-xs text-bad mt-1">
                       {generateProgress.errors[0]}
                     </div>
                   )}
@@ -1000,11 +1005,11 @@ export default function CustomDataView() {
             </div>
 
             {/* 底部按钮 */}
-            <div className="bg-dark-700 border-t border-dark-600 px-6 py-4 flex justify-end gap-3 rounded-b-xl">
+            <div className="bg-panel-2 border-t border-line px-6 py-4 flex justify-end gap-3 rounded-b-xl">
               {isPolling ? (
                 <button
                   onClick={handleStopGenerate}
-                  className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 flex items-center gap-2 transition-colors"
+                  className="px-4 py-2 bg-bad/20 text-bad border border-bad/30 rounded-lg hover:bg-bad/30 flex items-center gap-2 transition-colors"
                 >
                   <Square className="w-4 h-4" />
                   停止生成
@@ -1016,13 +1021,13 @@ export default function CustomDataView() {
                       setShowGeneratePanel(false)
                       setGenerateProgress(null)
                     }}
-                    className="px-4 py-2 text-white bg-dark-600 hover:bg-dark-500 rounded-lg transition-colors"
+                    className="px-4 py-2 text-ink bg-line hover:bg-line-strong rounded-lg transition-colors"
                   >
                     丢弃全部
                   </button>
                   <button
                     onClick={handleEnterReview}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 flex items-center gap-2 transition-all"
+                    className="px-4 py-2 bg-gradient-to-r from-iris to-iris text-ink rounded-lg hover:from-iris hover:to-iris flex items-center gap-2 transition-all"
                   >
                     <Eye className="w-4 h-4" />
                     进入审核 ({generateProgress.passed} 条)
@@ -1035,13 +1040,13 @@ export default function CustomDataView() {
                       setShowGeneratePanel(false)
                       setGenerateProgress(null)
                     }}
-                    className="px-4 py-2 text-white bg-dark-600 hover:bg-dark-500 rounded-lg transition-colors"
+                    className="px-4 py-2 text-ink bg-line hover:bg-line-strong rounded-lg transition-colors"
                   >
                     取消
                   </button>
                   <button
                     onClick={handleStartGenerate}
-                    className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 flex items-center gap-2 transition-all"
+                    className="px-4 py-2 bg-gradient-to-r from-iris to-flare text-ink rounded-lg hover:from-iris hover:to-flare flex items-center gap-2 transition-all"
                   >
                     <Sparkles className="w-4 h-4" />
                     开始生成
@@ -1055,36 +1060,36 @@ export default function CustomDataView() {
 
       {/* 人工审核面板 (全屏) */}
       {showReviewPanel && (
-        <div className="fixed inset-0 bg-dark-900 z-50 flex flex-col">
+        <div className="fixed inset-0 bg-canvas z-50 flex flex-col">
           {/* 审核头部 */}
-          <div className="bg-dark-800 border-b border-dark-700 px-6 py-4 flex items-center justify-between shrink-0">
+          <div className="bg-panel border-b border-panel-2 px-6 py-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                <Eye className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-iris to-iris flex items-center justify-center">
+                <Eye className="w-4 h-4 text-ink" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white">数据审核</h2>
-                <p className="text-xs text-gray-400">
+                <h2 className="text-lg font-bold text-ink">数据审核</h2>
+                <p className="text-xs text-ink-muted">
                   逐条预览生成的对话, 批准或拒绝后入库
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-green-400 font-medium">{approvedCount} 条批准</span>
-                <span className="text-gray-600">/</span>
-                <span className="text-gray-400">{reviewItems.length} 条总计</span>
+                <span className="text-ok font-medium">{approvedCount} 条批准</span>
+                <span className="text-ink-subtle">/</span>
+                <span className="text-ink-muted">{reviewItems.length} 条总计</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setAllReviewApproval(true)}
-                  className="px-3 py-1.5 text-xs bg-green-500/10 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/20 transition-colors"
+                  className="px-3 py-1.5 text-xs bg-ok/10 text-ok border border-ok/30 rounded-lg hover:bg-ok/20 transition-colors"
                 >
                   全选
                 </button>
                 <button
                   onClick={() => setAllReviewApproval(false)}
-                  className="px-3 py-1.5 text-xs bg-dark-700 text-gray-400 border border-dark-600 rounded-lg hover:bg-dark-600 transition-colors"
+                  className="px-3 py-1.5 text-xs bg-panel-2 text-ink-muted border border-line rounded-lg hover:bg-line transition-colors"
                 >
                   全不选
                 </button>
@@ -1101,8 +1106,8 @@ export default function CustomDataView() {
                   className={cn(
                     'border rounded-xl transition-all',
                     item.approved
-                      ? 'border-green-500/30 bg-dark-800'
-                      : 'border-red-500/30 bg-dark-800 opacity-60'
+                      ? 'border-ok/30 bg-panel'
+                      : 'border-bad/30 bg-panel opacity-60'
                   )}
                 >
                   {/* 条目头部 */}
@@ -1121,8 +1126,8 @@ export default function CustomDataView() {
                       className={cn(
                         'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors',
                         item.approved
-                          ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                          : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                          ? 'bg-ok/20 text-ok hover:bg-ok/30'
+                          : 'bg-bad/20 text-bad hover:bg-bad/30'
                       )}
                     >
                       {item.approved ? (
@@ -1135,39 +1140,39 @@ export default function CustomDataView() {
                     {/* 信息 */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-white truncate">
+                        <span className="text-sm font-medium text-ink truncate">
                           #{idx + 1} {item.title}
                         </span>
                         <span
                           className={cn(
                             'px-2 py-0.5 text-xs rounded-full font-medium shrink-0',
                             item.category === 'savings_explain'
-                              ? 'bg-blue-500/20 text-blue-400'
+                              ? 'bg-iris/20 text-info'
                               : item.category === 'rebate_query'
-                              ? 'bg-green-500/20 text-green-400'
+                              ? 'bg-ok/20 text-ok'
                               : item.category === 'complaint'
-                              ? 'bg-red-500/20 text-red-400'
+                              ? 'bg-bad/20 text-bad'
                               : item.category === 'order_problem'
-                              ? 'bg-yellow-500/20 text-yellow-400'
-                              : 'bg-gray-500/20 text-gray-400'
+                              ? 'bg-warn/20 text-warn'
+                              : 'bg-panel-2/20 text-ink-muted'
                           )}
                         >
                           {CATEGORIES.find((c) => c.id === item.category)?.name || item.category}
                         </span>
-                        <span className="text-xs text-gray-500 shrink-0">
+                        <span className="text-xs text-ink-subtle shrink-0">
                           {item.turn_count} 条消息
                         </span>
                       </div>
                       {/* 预览首句 */}
                       {expandedReviewIdx !== idx && item.conversation_json.length > 0 && (
-                        <p className="text-xs text-gray-500 mt-1 truncate">
+                        <p className="text-xs text-ink-subtle mt-1 truncate">
                           {item.conversation_json[0].content.split('\n')[0]}
                         </p>
                       )}
                     </div>
 
                     {/* 展开/收起 */}
-                    <div className="shrink-0 text-gray-500">
+                    <div className="shrink-0 text-ink-subtle">
                       {expandedReviewIdx === idx ? (
                         <ChevronUp className="w-4 h-4" />
                       ) : (
@@ -1178,11 +1183,11 @@ export default function CustomDataView() {
 
                   {/* 展开的对话内容 */}
                   {expandedReviewIdx === idx && (
-                    <div className="border-t border-dark-700 px-4 py-3">
+                    <div className="border-t border-panel-2 px-4 py-3">
                       {/* 编辑/预览切换按钮 */}
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-gray-500">
-                          {item.edited && <span className="text-yellow-400 mr-2">* 已修改</span>}
+                        <span className="text-xs text-ink-subtle">
+                          {item.edited && <span className="text-warn mr-2">* 已修改</span>}
                           {editingReviewIdx === idx ? '编辑模式 - 点击消息可修改' : '预览模式'}
                         </span>
                         <button
@@ -1193,8 +1198,8 @@ export default function CustomDataView() {
                           className={cn(
                             'px-2.5 py-1 text-xs rounded-lg flex items-center gap-1 transition-colors',
                             editingReviewIdx === idx
-                              ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                              : 'bg-dark-700 text-gray-400 border border-dark-600 hover:border-dark-500'
+                              ? 'bg-warn/20 text-warn border border-warn/30'
+                              : 'bg-panel-2 text-ink-muted border border-line hover:border-line-strong'
                           )}
                         >
                           <Pencil className="w-3 h-3" />
@@ -1208,8 +1213,8 @@ export default function CustomDataView() {
                             className={cn(
                               'p-2.5 rounded-lg text-sm',
                               turn.role === 'user'
-                                ? 'bg-blue-500/10 text-blue-300'
-                                : 'bg-green-500/10 text-green-300'
+                                ? 'bg-iris/10 text-info'
+                                : 'bg-ok/10 text-ok'
                             )}
                           >
                             <div className="flex items-center justify-between mb-1">
@@ -1219,7 +1224,7 @@ export default function CustomDataView() {
                               {editingReviewIdx === idx && item.conversation_json.length > 2 && (
                                 <button
                                   onClick={() => deleteReviewTurn(idx, tIdx)}
-                                  className="p-0.5 text-red-400/60 hover:text-red-400 transition-colors"
+                                  className="p-0.5 text-bad/60 hover:text-bad transition-colors"
                                   title="删除此条"
                                 >
                                   <Trash2 className="w-3 h-3" />
@@ -1230,7 +1235,7 @@ export default function CustomDataView() {
                               <textarea
                                 value={turn.content}
                                 onChange={(e) => updateReviewTurnContent(idx, tIdx, e.target.value)}
-                                className="w-full bg-dark-700/50 border border-dark-600 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                                className="w-full bg-panel-2/50 border border-line rounded px-2 py-1.5 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-iris resize-none"
                                 rows={Math.max(2, turn.content.split('\n').length)}
                               />
                             ) : (
@@ -1247,14 +1252,14 @@ export default function CustomDataView() {
           </div>
 
           {/* 审核底部操作栏 */}
-          <div className="bg-dark-800 border-t border-dark-700 px-6 py-4 flex items-center justify-between shrink-0">
+          <div className="bg-panel border-t border-panel-2 px-6 py-4 flex items-center justify-between shrink-0">
             <button
               onClick={() => {
                 setShowReviewPanel(false)
                 setReviewItems([])
                 setGenerateProgress(null)
               }}
-              className="px-4 py-2 text-white bg-dark-700 hover:bg-dark-600 rounded-lg transition-colors"
+              className="px-4 py-2 text-ink bg-panel-2 hover:bg-line rounded-lg transition-colors"
             >
               丢弃全部并关闭
             </button>
@@ -1264,8 +1269,8 @@ export default function CustomDataView() {
               className={cn(
                 'px-5 py-2.5 rounded-lg flex items-center gap-2 font-medium transition-all',
                 approvedCount > 0
-                  ? 'bg-green-500 text-white hover:bg-green-600'
-                  : 'bg-dark-700 text-gray-500 cursor-not-allowed'
+                  ? 'bg-ok text-ink hover:bg-ok'
+                  : 'bg-panel-2 text-ink-subtle cursor-not-allowed'
               )}
             >
               <Download className="w-4 h-4" />

@@ -1,10 +1,50 @@
-import { MessageCircle, Gauge, Edit3, Sparkles, Search, User, LogOut, Lightbulb, ClipboardList, MessageSquare, GraduationCap } from 'lucide-react'
-import { useState } from 'react'
+// -*- coding: utf-8 -*-
+/**
+ * PrimarySidebar — 主导航（按业务链路分组）
+ *
+ * 交互重设计：
+ * - 原来 9 个一级入口平铺，在线服务 / 离线数据混在一起，只能靠图标猜位置。
+ * - 现在窄条只放「3 个工作区 + 当前工作区的功能 + 全局工具」；完整功能分布、
+ *   业务链路步骤、跨链路入口都在可展开的玻璃导航面板里。
+ * - 面板聚焦哪个工作区与当前页面所在工作区是两件事：点工作区按钮只展开菜单，
+ *   不偷偷换页；真正跳转必须点具体功能，避免误触丢失当前上下文。
+ * - 面板底部可设置「跳转后自动折叠」，偏好写入 localStorage：
+ *   开启 = 点功能即收起；关闭 = 面板常驻，宽屏下切换为停靠布局（推右内容而非遮挡）。
+ *   ESC / 点遮罩 / 关闭按钮是显式操作，始终能收起面板。
+ *
+ * 视觉约束：沿用 tokens.css / glass / iris / line 等既有类名，不新增配色与字体。
+ */
+import {
+  ChevronRight,
+  LogOut,
+  MessageCircle,
+  Moon,
+  Sun,
+  User,
+  X,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { cn } from '../utils'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
+import {
+  FLOWS,
+  GLOBAL_TOOLS,
+  NAV_ITEM_BY_ID,
+  OVERVIEW_ITEM,
+  WORKSPACES,
+  getNavItem,
+  getWorkspace,
+  type NavItem,
+  type WorkspaceId,
+} from '../navigation'
+import type { AgentPane } from '../appRoutes'
+import { getBrowserStorage, readAutoCollapse, writeAutoCollapse } from '../navigationPref'
 
 interface PrimarySidebarProps {
   currentView: string
+  currentPane?: AgentPane | null
   onOpenChat: () => void
   onOpenSearch: () => void
   onOpenAI: () => void
@@ -15,171 +55,498 @@ interface PrimarySidebarProps {
   onOpenAgent?: () => void
   onOpenTraining?: () => void
   onLoginClick?: () => void
+  /** 按 IA 真源里的精确路径跳转（含 /agent/* 子页） */
+  onNavigate?: (path: string) => void
 }
 
 export default function PrimarySidebar(props: PrimarySidebarProps) {
   const { user, isAuthenticated, logout } = useAuth()
+  const { resolvedTheme, toggleTheme } = useTheme()
+  const reduceMotion = useReducedMotion()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
-  const NavButton = ({ 
-    icon: Icon, 
-    label, 
-    active, 
-    onClick 
-  }: { 
-    icon: any, 
-    label: string, 
-    active: boolean, 
-    onClick?: () => void 
+  const [expanded, setExpanded] = useState(false)
+  const [focusedWorkspace, setFocusedWorkspace] = useState<WorkspaceId | null>(null)
+  const [autoCollapse, setAutoCollapse] = useState(() => readAutoCollapse(getBrowserStorage()))
+  const [isWide, setIsWide] = useState(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(min-width: 1024px)').matches
+      : false,
+  )
+
+  const view = props.currentView as Parameters<typeof getNavItem>[0]
+  const isOverview = view === 'overview'
+  const OverviewIcon = OVERVIEW_ITEM.icon
+  const activeItem = getNavItem(view, props.currentPane)
+  const activeWorkspace = getWorkspace(view, props.currentPane)
+  const panelWorkspace = WORKSPACES.find((w) => w.id === (focusedWorkspace ?? activeWorkspace.id)) ?? activeWorkspace
+  /** 常驻面板只在宽屏停靠；窄屏保持浮层，避免把内容区挤没 */
+  const docked = expanded && !autoCollapse && isWide
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const query = window.matchMedia('(min-width: 1024px)')
+    const onChange = (event: MediaQueryListEvent) => setIsWide(event.matches)
+    setIsWide(query.matches)
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+  }, [])
+
+  useEffect(() => {
+    if (!expanded) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setExpanded(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [expanded])
+
+  const toggleAutoCollapse = () => {
+    setAutoCollapse((current) => {
+      const next = !current
+      writeAutoCollapse(next, getBrowserStorage())
+      return next
+    })
+  }
+
+  /** 统一跳转出口：精确路径优先，保留旧回调以兼容既有调用方 */
+  const selectItem = (item: NavItem) => {
+    // 关闭自动折叠后面板保持展开，方便连续切换功能；显式关闭依然随时可用
+    if (autoCollapse) setExpanded(false)
+    const isGlobalTool = item.view === 'ai' || item.view === 'search' || item.view === 'overview'
+    setFocusedWorkspace(isGlobalTool ? activeWorkspace.id : getWorkspace(item.view, item.pane).id)
+
+    if (item.view === 'chat') {
+      props.onOpenChat()
+      return
+    }
+    if (props.onNavigate) {
+      props.onNavigate(item.path)
+      return
+    }
+    const legacy: Partial<Record<NavItem['view'], () => void>> = {
+      search: props.onOpenSearch,
+      ai: props.onOpenAI,
+      admin: props.onOpenAdmin,
+      custom: props.onOpenCustom,
+      extractor: props.onOpenExtractor,
+      quiz: props.onOpenQuiz,
+      agent: props.onOpenAgent,
+      training: props.onOpenTraining,
+    }
+    legacy[item.view]?.()
+  }
+
+  const openWorkspaceMenu = (id: WorkspaceId) => {
+    setFocusedWorkspace(id)
+    setExpanded(true)
+  }
+
+  const NavButton = ({
+    icon: Icon,
+    label,
+    active,
+    onClick,
+    tone,
+  }: {
+    icon: NavItem['icon']
+    label: string
+    active: boolean
+    onClick?: () => void
+    tone?: string
   }) => (
     <button
+      type="button"
       onClick={onClick}
+      aria-label={label}
+      aria-current={active ? 'page' : undefined}
       className={cn(
-        "relative w-12 h-12 flex items-center justify-center rounded-xl transition-all group",
-        active 
-          ? "bg-accent-primary/20 text-accent-primary" 
-          : "text-gray-400 hover:bg-dark-700/50 hover:text-gray-200"
+        'relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all group flex-shrink-0',
+        active ? (tone ?? 'bg-iris/20 text-iris') : 'text-ink-muted hover:bg-panel-2/50 hover:text-ink',
       )}
       title={label}
     >
-      {active && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-accent-primary rounded-r-md" />
-      )}
-      <Icon size={24} strokeWidth={active ? 2.5 : 2} />
+      {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-iris rounded-r-md" />}
+      <Icon size={22} strokeWidth={active ? 2.5 : 2} />
     </button>
   )
 
   return (
-    <nav className="w-20 h-full flex-shrink-0 bg-[#1e1e20] border-r border-dark-600 flex flex-col items-center py-6 gap-6 z-20">
-      {/* Logo */}
-      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent-primary to-accent-secondary flex items-center justify-center shadow-lg shadow-accent-primary/20 flex-shrink-0 mb-2">
-        <MessageCircle size={28} className="text-white" />
-      </div>
-
-      {/* Nav Actions */}
-      <div className="flex-1 flex flex-col items-center gap-3 w-full">
-        <NavButton 
-          icon={MessageCircle} 
-          label="会话列表" 
-          active={props.currentView === 'chat'} 
-          onClick={props.onOpenChat} 
-        />
-        {props.onOpenAdmin && (
-          <NavButton 
-            icon={Gauge} 
-            label="数据质检中心"
-            active={props.currentView === 'admin'} 
-            onClick={props.onOpenAdmin} 
-          />
-        )}
-        {props.onOpenCustom && (
-          <NavButton 
-            icon={Edit3} 
-            label="自定义数据" 
-            active={props.currentView === 'custom'} 
-            onClick={props.onOpenCustom} 
-          />
-        )}
-        {props.onOpenExtractor && (
-          <NavButton 
-            icon={Lightbulb} 
-            label="知识提炼" 
-            active={props.currentView === 'extractor'} 
-            onClick={props.onOpenExtractor} 
-          />
-        )}
-        {props.onOpenQuiz && (
-          <NavButton 
-            icon={ClipboardList} 
-            label="AI 考核" 
-            active={props.currentView === 'quiz'} 
-            onClick={props.onOpenQuiz} 
-          />
-        )}
-        <NavButton
-          icon={Sparkles}
-          label="AI 问答"
-          active={props.currentView === 'ai'}
-          onClick={props.onOpenAI}
-        />
-        {props.onOpenAgent && (
-          <NavButton
-            icon={MessageSquare}
-            label="智能客服 Agent"
-            active={props.currentView === 'agent'}
-            onClick={props.onOpenAgent}
-          />
-        )}
-        {props.onOpenTraining && (
-          <NavButton
-            icon={GraduationCap}
-            label="训练数据管理"
-            active={props.currentView === 'training'}
-            onClick={props.onOpenTraining}
-          />
-        )}
-      </div>
-
-      {/* Bottom Actions */}
-      <div className="flex flex-col items-center gap-3 w-full pb-4">
-        <NavButton 
-          icon={Search} 
-          label="全局搜索" 
-          active={props.currentView === 'search'} 
-          onClick={props.onOpenSearch} 
-        />
-
-        {/* User Profile / Login */}
-        <div className="relative mt-2">
-          {isAuthenticated ? (
-            <>
-              <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="w-12 h-12 flex flex-col items-center justify-center rounded-xl hover:bg-dark-700/50 transition-colors tooltip group relative"
-                title={user?.nickname || undefined}
-              >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">
-                    {(user?.nickname || user?.username || 'U').charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              </button>
-
-              {/* Profile Dropdown */}
-              {showProfileMenu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)} />
-                  <div className="absolute left-full ml-4 bottom-0 w-48 bg-dark-800 border border-dark-600 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-left-2 z-50">
-                    <div className="px-4 py-3 border-b border-dark-700">
-                      <p className="text-sm font-medium text-white max-w-[160px] truncate">{user?.nickname}</p>
-                      <p className="text-xs text-gray-500 max-w-[160px] truncate">@{user?.username}</p>
-                      <p className="text-[10px] mt-1 text-accent-primary uppercase tracking-wider">{user?.role}</p>
-                    </div>
-                    <div className="p-1">
-                      <button 
-                        onClick={() => {
-                          logout()
-                          setShowProfileMenu(false)
-                        }}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-dark-700 rounded-lg transition-colors"
-                      >
-                        <LogOut size={16} /> 退出登录
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
-            <button
-              onClick={props.onLoginClick}
-              className="w-12 h-12 flex items-center justify-center rounded-xl bg-dark-800 text-gray-400 hover:text-accent-primary hover:bg-dark-700 transition-all border border-dark-600/50 hover:border-accent-primary/20"
-              title="登录"
-            >
-              <User size={20} />
-            </button>
-          )}
+    <>
+      <nav className="w-16 md:w-20 h-full flex-shrink-0 bg-panel-2/70 border-r border-line flex flex-col items-center py-5 gap-4 z-20 backdrop-blur-xl relative">
+        {/* Logo */}
+        <div
+          className="w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center shadow-glow flex-shrink-0"
+          style={{ background: 'conic-gradient(from 210deg, rgb(var(--c-mint)), rgb(var(--c-iris)), rgb(var(--c-flare)), rgb(var(--c-mint)))' }}
+        >
+          <div className="w-[calc(100%-6px)] h-[calc(100%-6px)] rounded-xl bg-canvas/85 backdrop-blur-md flex items-center justify-center">
+            <MessageCircle size={20} className="text-ink" strokeWidth={1.8} />
+          </div>
         </div>
-      </div>
-    </nav>
+
+        {/* 功能地图：完整 IA 与业务链路 */}
+        <button
+          type="button"
+          onClick={() => {
+            setFocusedWorkspace(activeWorkspace.id)
+            setExpanded((value) => !value)
+          }}
+          aria-expanded={expanded}
+          aria-label={expanded ? '收起功能地图' : '展开功能地图'}
+          title={expanded ? '收起功能地图' : '展开功能地图'}
+          className={cn(
+            'w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center transition-colors flex-shrink-0',
+            expanded ? 'bg-iris/20 text-iris' : 'text-ink-subtle hover:bg-panel-2/60 hover:text-ink',
+          )}
+        >
+          {expanded ? <X size={20} /> : <ChevronRight size={20} />}
+        </button>
+
+        {/* 全局数据看板：跨三条链路，不归属任何工作区 */}
+        <NavButton
+          icon={OVERVIEW_ITEM.icon}
+          label={OVERVIEW_ITEM.label}
+          active={isOverview}
+          onClick={() => selectItem(OVERVIEW_ITEM)}
+        />
+
+        <div className="w-8 h-px bg-line/70 flex-shrink-0" />
+
+        {/* 工作区切换：只展开对应菜单，不直接换页 */}
+        <div className="flex flex-col items-center gap-2 w-full flex-shrink-0">
+          {WORKSPACES.map((workspace) => {
+            const active = !isOverview && workspace.id === activeWorkspace.id
+            const Icon = workspace.icon
+            return (
+              <NavButton
+                key={workspace.id}
+                icon={Icon}
+                label={`${workspace.index} ${workspace.label} · ${workspace.desc}`}
+                active={active}
+                tone={workspace.activeCls}
+                onClick={() => openWorkspaceMenu(workspace.id)}
+              />
+            )
+          })}
+        </div>
+
+        <div className="w-8 h-px bg-line/70 flex-shrink-0" />
+
+        {/* 当前工作区的功能入口；总览页给三条链路的首项，方便直接下钻 */}
+        <div className="flex flex-col items-center gap-2 w-full flex-shrink-0">
+          {(isOverview ? WORKSPACES.map((workspace) => workspace.items[0]) : activeWorkspace.items).map((item) => (
+            <NavButton
+              key={item.id}
+              icon={item.icon}
+              label={item.label}
+              active={item.id === activeItem.id}
+              onClick={() => selectItem(item)}
+            />
+          ))}
+        </div>
+
+        <div className="flex-1" />
+
+        {/* 全局工具 + 主题 + 账户 */}
+        <div className="flex flex-col items-center gap-2 w-full pb-2 flex-shrink-0">
+          <div className="w-8 h-px bg-line/70 mb-1" />
+          {GLOBAL_TOOLS.map((item) => (
+            <NavButton
+              key={item.id}
+              icon={item.icon}
+              label={item.label}
+              active={item.id === activeItem.id}
+              onClick={() => selectItem(item)}
+            />
+          ))}
+
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={resolvedTheme === 'dark' ? '切换到亮色主题' : '切换到暗色主题'}
+            title={resolvedTheme === 'dark' ? '切换到亮色主题' : '切换到暗色主题'}
+            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl text-ink-subtle hover:bg-panel-2/60 hover:text-ink transition-colors"
+          >
+            {resolvedTheme === 'dark' ? <Sun size={19} strokeWidth={1.8} /> : <Moon size={19} strokeWidth={1.8} />}
+          </button>
+
+          <div className="relative mt-1">
+            {isAuthenticated ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="w-12 h-12 flex flex-col items-center justify-center rounded-xl hover:bg-panel-2/50 transition-colors"
+                  title={user?.nickname || undefined}
+                  aria-label="账户菜单"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-mint to-mint flex items-center justify-center">
+                    <span className="text-ink text-xs font-bold">
+                      {(user?.nickname || user?.username || 'U').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </button>
+
+                {showProfileMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)} />
+                    <div className="absolute left-full ml-4 bottom-0 w-48 bg-panel border border-line rounded-xl shadow-xl overflow-hidden animate-fade-in z-50">
+                      <div className="px-4 py-3 border-b border-panel-2">
+                        <p className="text-sm font-medium text-ink max-w-[160px] truncate">{user?.nickname}</p>
+                        <p className="text-xs text-ink-subtle max-w-[160px] truncate">@{user?.username}</p>
+                        <p className="text-[10px] mt-1 text-iris uppercase tracking-wider">{user?.role}</p>
+                      </div>
+                      <div className="p-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            logout()
+                            setShowProfileMenu(false)
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-bad hover:text-bad hover:bg-panel-2 rounded-lg transition-colors"
+                        >
+                          <LogOut size={16} /> 退出登录
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={props.onLoginClick}
+                className="w-12 h-12 flex items-center justify-center rounded-xl bg-panel text-ink-muted hover:text-iris hover:bg-panel-2 transition-all border border-line/50 hover:border-iris/20"
+                title="登录"
+                aria-label="登录"
+              >
+                <User size={20} />
+              </button>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* 浮层模式才有遮罩；停靠模式面板占位，不挡内容 */}
+      {expanded && !docked && (
+        <div className="fixed inset-0 z-40" onClick={() => setExpanded(false)} aria-hidden="true" />
+      )}
+
+      {/* 展开式功能地图：自动折叠开启为浮层，关闭且宽屏时为停靠面板 */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.aside
+            key="nav-panel"
+            role="dialog"
+            aria-label="功能地图"
+            data-docked={docked ? 'true' : 'false'}
+            initial={{ opacity: 0, x: -14 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -14 }}
+            transition={{ duration: reduceMotion ? 0 : 0.22, ease: 'easeOut' }}
+            className={cn(
+              'z-50 glass border-r border-line flex flex-col shadow-glass',
+              docked
+                ? 'relative h-full w-[300px] xl:w-[340px] flex-shrink-0'
+                : 'fixed left-16 md:left-20 top-0 bottom-0 w-[min(340px,calc(100vw-4rem))]',
+            )}
+          >
+              <header className="px-5 pt-5 pb-4 border-b border-line/70 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-subtle">Navigation Map</p>
+                    <h2 className="font-display text-lg font-bold text-ink mt-1">功能地图</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(false)}
+                    className="p-2 rounded-lg hover:bg-panel-2/60 text-ink-muted hover:text-ink transition-colors"
+                    aria-label="关闭功能地图"
+                  >
+                    <X size={17} />
+                  </button>
+                </div>
+                <p className="text-[11px] leading-relaxed text-ink-subtle mt-2">
+                  按业务链路分组，点击工作区只看菜单，点击功能才跳转。
+                </p>
+              </header>
+
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+                {/* 全局数据看板：跨链路汇总入口 */}
+                <button
+                  type="button"
+                  onClick={() => selectItem(OVERVIEW_ITEM)}
+                  aria-current={isOverview ? 'page' : undefined}
+                  className={cn(
+                    'w-full mb-5 flex items-start gap-3 rounded-xl border p-3 text-left transition-colors',
+                    isOverview ? 'border-iris/40 bg-iris/15' : 'border-line/70 bg-panel-2/40 hover:bg-panel-2/70',
+                  )}
+                >
+                  <span className="w-8 h-8 rounded-lg bg-iris/15 text-iris flex items-center justify-center flex-shrink-0">
+                    <OverviewIcon size={16} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-medium text-ink">{OVERVIEW_ITEM.label}</span>
+                    <span className="block text-[10px] text-ink-subtle leading-relaxed">{OVERVIEW_ITEM.desc}</span>
+                  </span>
+                  <ChevronRight size={14} className="text-ink-subtle mt-2 flex-shrink-0" />
+                </button>
+
+                {/* 业务链路总览 */}
+                <section className="mb-5">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-subtle mb-2 px-1">业务链路</p>
+                  {(Object.keys(FLOWS) as Array<keyof typeof FLOWS>).map((flowId) => {
+                    const flow = FLOWS[flowId]
+                    return (
+                      <div key={flowId} className="mb-3 rounded-xl border border-line/70 bg-panel-2/40 p-3">
+                        <p className="text-[11px] text-ink-muted mb-2">{flow.label}</p>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {flow.itemIds.map((id, index) => {
+                            const item = NAV_ITEM_BY_ID[id]
+                            return (
+                              <span key={id} className="flex items-center gap-1">
+                                {index > 0 && <ChevronRight size={11} className="text-ink-subtle" />}
+                                <button
+                                  type="button"
+                                  onClick={() => selectItem(item)}
+                                  className={cn(
+                                    'rounded-pill border px-2 py-1 text-[10px] transition-colors',
+                                    item.id === activeItem.id
+                                      ? 'border-iris/40 bg-iris/15 text-ink'
+                                      : 'border-line/70 bg-panel/50 text-ink-muted hover:text-ink hover:border-line-strong',
+                                  )}
+                                >
+                                  {item.label}
+                                </button>
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </section>
+
+                {/* 三个工作区：默认展开当前聚焦的那一组 */}
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-subtle mb-2 px-1">工作区</p>
+                {WORKSPACES.map((workspace) => {
+                  const focused = workspace.id === panelWorkspace.id
+                  const Icon = workspace.icon
+                  return (
+                    <section key={workspace.id} className="mb-2">
+                      <button
+                        type="button"
+                        onClick={() => setFocusedWorkspace(workspace.id)}
+                        className={cn(
+                          'w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors',
+                          focused ? 'bg-panel-2/70' : 'hover:bg-panel-2/40',
+                        )}
+                      >
+                        <span className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', focused ? workspace.activeCls : 'bg-panel-2/60 text-ink-subtle')}>
+                          <Icon size={15} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-2">
+                            <span className="font-mono text-[10px] text-ink-subtle">{workspace.index}</span>
+                            <span className="text-sm font-medium text-ink">{workspace.label}</span>
+                          </span>
+                          <span className="block text-[10px] text-ink-subtle truncate">{workspace.desc}</span>
+                        </span>
+                        <ChevronRight size={14} className={cn('text-ink-subtle transition-transform', focused && 'rotate-90')} />
+                      </button>
+
+                      {focused && (
+                        <div className="mt-1 mb-3 pl-2 border-l border-line/70 ml-5">
+                          {workspace.items.map((item) => {
+                            const active = item.id === activeItem.id
+                            const ItemIcon = item.icon
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => selectItem(item)}
+                                aria-current={active ? 'page' : undefined}
+                                className={cn(
+                                  'w-full flex items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors',
+                                  active ? 'bg-iris/15' : 'hover:bg-panel-2/50',
+                                )}
+                              >
+                                <ItemIcon size={15} className={cn('mt-0.5 flex-shrink-0', active ? 'text-iris' : 'text-ink-subtle')} />
+                                <span className="min-w-0 flex-1">
+                                  <span className={cn('block text-[13px]', active ? 'text-ink font-medium' : 'text-ink-muted')}>{item.label}</span>
+                                  <span className="block text-[10px] text-ink-subtle leading-relaxed">{item.desc}</span>
+                                  {item.steps && (
+                                    <span className="block font-mono text-[9px] text-ink-subtle mt-1 truncate">
+                                      {item.steps.join(' → ')}
+                                    </span>
+                                  )}
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </section>
+                  )
+                })}
+
+                {/* 全局工具 */}
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-subtle mb-2 mt-5 px-1">全局工具</p>
+                <div className="space-y-1">
+                  {GLOBAL_TOOLS.map((item) => {
+                    const ItemIcon = item.icon
+                    const active = item.id === activeItem.id
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => selectItem(item)}
+                        className={cn(
+                          'w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors',
+                          active ? 'bg-iris/15 text-ink' : 'text-ink-muted hover:bg-panel-2/50 hover:text-ink',
+                        )}
+                      >
+                        <ItemIcon size={15} className="flex-shrink-0" />
+                        <span className="text-[13px]">{item.label}</span>
+                        <span className="ml-auto text-[10px] text-ink-subtle truncate max-w-[130px]">{item.desc}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <footer className="px-4 py-3 border-t border-line/70 flex-shrink-0">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={autoCollapse}
+                  onClick={toggleAutoCollapse}
+                  className="w-full flex items-center justify-between gap-3 rounded-xl px-2.5 py-2 text-left hover:bg-panel-2/50 transition-colors"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-[12px] text-ink">跳转后自动折叠</span>
+                    <span className="block text-[10px] text-ink-subtle leading-relaxed">
+                      {autoCollapse
+                        ? '点功能即收起，不占用内容宽度'
+                        : isWide ? '面板常驻并停靠在左侧' : '面板常驻，窄屏需手动关闭'}
+                    </span>
+                  </span>
+                  <span className={cn(
+                    'relative w-9 h-5 rounded-pill border flex-shrink-0 transition-colors',
+                    autoCollapse ? 'bg-brand/80 border-brand' : 'bg-panel-2/80 border-line-strong',
+                  )}>
+                    <span className={cn(
+                      'absolute top-[3px] w-3.5 h-3.5 rounded-full transition-all',
+                      autoCollapse ? 'left-[18px] bg-brand-fg' : 'left-[3px] bg-ink-subtle',
+                    )} />
+                  </span>
+                </button>
+                <p className="font-mono text-[10px] text-ink-subtle truncate mt-1 px-2.5">
+                  当前 · {activeWorkspace.index} {activeWorkspace.label} / {activeItem.label}
+                </p>
+              </footer>
+            </motion.aside>
+        )}
+      </AnimatePresence>
+    </>
   )
 }

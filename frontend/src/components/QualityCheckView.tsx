@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { motion } from 'framer-motion'
 import {
   ShieldCheck, BarChart3, AlertTriangle, Search, RefreshCw, Loader2, ChevronLeft,
   CheckCircle2, ClipboardList, Plus, Trash2, AlertCircle, ListChecks, RotateCcw, Lightbulb,
@@ -11,6 +12,12 @@ import {
 } from '../api'
 import { cn } from '../utils'
 import { maskSessionId } from '../sessionDisplay'
+import {
+  StatCard as AuroraStatCard,
+  ChartFrame,
+  ScoreHistogram,
+  CategoryBars,
+} from './ui'
 
 interface QualityCheckViewProps {
   onClose?: () => void
@@ -26,9 +33,9 @@ const FALLBACK_DIM_NAMES: Record<string, string> = {
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
-  high: 'text-red-400 bg-red-500/10 border-red-500/20',
-  medium: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
-  low: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+  high: 'text-bad bg-bad/10 border-bad/20',
+  medium: 'text-warn bg-warn/10 border-warn/20',
+  low: 'text-info bg-iris/10 border-iris/20',
 }
 
 const SEVERITY_OPTIONS = [
@@ -38,10 +45,10 @@ const SEVERITY_OPTIONS = [
 ]
 
 const scoreColor = (s: number | null | undefined) => {
-  if (s == null) return 'text-gray-400'
-  if (s >= 80) return 'text-green-400'
-  if (s >= 60) return 'text-yellow-400'
-  return 'text-red-400'
+  if (s == null) return 'text-ink-muted'
+  if (s >= 80) return 'text-ok'
+  if (s >= 60) return 'text-warn'
+  return 'text-bad'
 }
 
 const slugify = (s: string): string => {
@@ -150,18 +157,18 @@ export default function QualityCheckView({ embedded = false }: QualityCheckViewP
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-dark-900 overflow-hidden">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       {/* Header（嵌入模式下隐藏，由外层页签提供） */}
       {!embedded && (
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-600">
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <ClipboardCheck size={24} className="text-accent-primary" />
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line">
+          <h1 className="text-xl font-bold text-ink flex items-center gap-2">
+            <ClipboardCheck size={24} className="text-iris" />
             质检评分
           </h1>
           <div className="flex items-center gap-2">
             <button
               onClick={() => { loadStats(); loadInspections(1) }}
-              className="p-2 rounded-lg hover:bg-dark-700 text-gray-400"
+              className="p-2 rounded-lg hover:bg-panel-2 text-ink-muted"
               title="刷新"
             >
               <RefreshCw size={18} />
@@ -178,7 +185,7 @@ export default function QualityCheckView({ embedded = false }: QualityCheckViewP
       </div>
 
       {error && (
-        <div className="mx-6 mt-4 px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm flex items-center gap-2">
+        <div className="mx-6 mt-4 px-4 py-2 bg-bad/10 border border-bad/30 rounded-lg text-bad text-sm flex items-center gap-2">
           <AlertCircle size={16} /> {error}
         </div>
       )}
@@ -230,7 +237,7 @@ export function TabButton({ active, onClick, icon: Icon, label }: any) {
       onClick={onClick}
       className={cn(
         'px-4 py-2 rounded-t-lg text-sm font-medium transition-colors flex items-center gap-1.5',
-        active ? 'bg-dark-800 text-white border-b-2 border-accent-primary' : 'text-gray-500 hover:text-gray-300'
+        active ? 'bg-panel text-ink border-b-2 border-iris' : 'text-ink-subtle hover:text-ink'
       )}
     >
       <Icon size={16} /> {label}
@@ -250,62 +257,86 @@ function ResultsTab(props: any) {
     <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-5">
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard label="质检总数" value={stats.total} />
-          <StatCard label="平均得分" value={stats.avg_score != null ? stats.avg_score : '-'} color={scoreColor(stats.avg_score)} />
-          <StatCard label="及格率" value={stats.pass_rate != null ? `${(stats.pass_rate * 100).toFixed(0)}%` : '-'} />
-          <StatCard label="及格线" value={stats.threshold} />
-        </div>
+        <motion.div
+          initial="hidden"
+          animate="show"
+          transition={{ staggerChildren: 0.05 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-3"
+        >
+          <AuroraStatCard label="质检总数" value={stats.total} hint="当前快照" icon={<ShieldCheck size={17} />} />
+          <AuroraStatCard
+            label="平均得分"
+            value={<span className={scoreColor(stats.avg_score)}>{stats.avg_score != null ? stats.avg_score : '-'}</span>}
+            hint={`及格线 ${stats.threshold}`}
+            icon={<BarChart3 size={17} />}
+          />
+          <AuroraStatCard
+            label="及格率"
+            value={stats.pass_rate != null ? `${(stats.pass_rate * 100).toFixed(0)}%` : '-'}
+            hint="达到及格线的占比"
+            icon={<CheckCircle2 size={17} />}
+            tone="mint"
+          />
+          <AuroraStatCard label="及格线" value={stats.threshold} hint="当前配置阈值" icon={<ClipboardCheck size={17} />} />
+        </motion.div>
       )}
 
-      {stats && stats.top_violations.length > 0 && (
-        <div className="bg-dark-800 rounded-xl border border-dark-600 p-4">
-          <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-            <AlertTriangle size={16} className="text-yellow-400" /> 高频违规项 TOP
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {stats.top_violations.map((v: any) => (
-              <span key={v.type} className="px-2.5 py-1 rounded-full bg-red-500/10 text-red-300 text-xs border border-red-500/20">
-                {v.type} · {v.count}
-              </span>
-            ))}
-          </div>
+      {/* 分布图：来自 /api/qc/stats 当前快照 */}
+      {stats && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ChartFrame title="质检分数分布" subtitle="按分数段 · 当前快照">
+            <ScoreHistogram
+              data={Object.entries(stats.score_distribution ?? {}).map(([name, value]) => ({ name, value: Number(value) || 0 }))}
+              unit=" 次"
+            />
+          </ChartFrame>
+          <ChartFrame
+            title="高频违规项 TOP"
+            subtitle="按出现次数 · 当前快照"
+            aside={<AlertTriangle size={16} className="text-warn" />}
+          >
+            <CategoryBars
+              data={stats.top_violations.map((v: { type: string; count: number }) => ({ name: v.type, value: v.count }))}
+              unit=" 次"
+              emptyHint="暂无违规记录"
+            />
+          </ChartFrame>
         </div>
       )}
 
       {/* Trigger */}
-      <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 space-y-3">
-        <h3 className="text-sm font-medium text-gray-300 flex items-center gap-2">
-          <ClipboardList size={16} className="text-accent-primary" /> 发起质检
+      <div className="bg-panel rounded-xl border border-line p-4 space-y-3">
+        <h3 className="text-sm font-medium text-ink flex items-center gap-2">
+          <ClipboardList size={16} className="text-iris" /> 发起质检
         </h3>
         <div className="flex items-center gap-2 flex-wrap">
           <input
             value={sessionInput}
             onChange={(e) => setSessionInput(e.target.value)}
             placeholder="输入会话 ID（session_id）"
-            className="flex-1 min-w-[200px] bg-dark-700 border border-dark-500 rounded-lg px-3 py-1.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none"
+            className="flex-1 min-w-[200px] bg-panel-2 border border-line-strong rounded-lg px-3 py-1.5 text-sm text-ink placeholder-ink-subtle focus:outline-none"
           />
           <button
             onClick={() => onInspect(sessionInput)}
             disabled={loading}
-            className="px-4 py-1.5 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/80 disabled:opacity-50 text-sm flex items-center gap-1"
+            className="px-4 py-1.5 bg-iris text-ink rounded-lg hover:bg-iris/80 disabled:opacity-50 text-sm flex items-center gap-1"
           >
             {loading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />} 质检该会话
           </button>
           <button
             onClick={onBatch}
             disabled={loading}
-            className="px-4 py-1.5 bg-dark-700 text-gray-200 rounded-lg hover:bg-dark-600 disabled:opacity-50 text-sm"
+            className="px-4 py-1.5 bg-panel-2 text-ink rounded-lg hover:bg-line disabled:opacity-50 text-sm"
           >
             批量抽检最近会话
           </button>
         </div>
-        <p className="text-xs text-gray-500">提示：批量抽检会对最近 30 个会话异步质检。质检将使用下方「质检规则配置」中设定的唯一一套标准。</p>
+        <p className="text-xs text-ink-subtle">提示：批量抽检会对最近 30 个会话异步质检。质检将使用下方「质检规则配置」中设定的唯一一套标准。</p>
       </div>
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap text-sm">
-        <span className="text-gray-500">筛选：</span>
+        <span className="text-ink-subtle">筛选：</span>
         <FilterSelect
           value={filters.status || ''}
           onChange={(v) => setFilters((f: any) => ({ ...f, status: v || undefined }))}
@@ -316,16 +347,16 @@ function ResultsTab(props: any) {
           onChange={(v) => setFilters((f: any) => ({ ...f, min_score: v ? Number(v) : undefined }))}
           options={[{ value: '', label: '全部分数' }, { value: '60', label: '≥60' }, { value: '80', label: '≥80' }, { value: '40', label: '≥40' }]}
         />
-        <button onClick={onRefresh} className="px-2 py-1 text-gray-400 hover:text-gray-200">应用</button>
+        <button onClick={onRefresh} className="px-2 py-1 text-ink-muted hover:text-ink">应用</button>
       </div>
 
       {/* List */}
       {loading && items.length === 0 ? (
-        <div className="flex items-center justify-center py-16 text-gray-500">
+        <div className="flex items-center justify-center py-16 text-ink-subtle">
           <Loader2 size={32} className="animate-spin" />
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+        <div className="flex flex-col items-center justify-center py-20 text-ink-subtle">
           <ShieldCheck size={48} className="mb-4 opacity-30" />
           <p>还没有质检记录，先发起一次质检吧</p>
         </div>
@@ -335,7 +366,7 @@ function ResultsTab(props: any) {
             <div
               key={it.id}
               onClick={() => onOpenDetail(it.id)}
-              className="bg-dark-800 rounded-xl border border-dark-600 p-4 flex items-center justify-between hover:border-dark-500 transition-colors cursor-pointer"
+              className="bg-panel rounded-xl border border-line p-4 flex items-center justify-between hover:border-line-strong transition-colors cursor-pointer"
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -343,24 +374,24 @@ function ResultsTab(props: any) {
                     {it.overall_score != null ? it.overall_score : (it.scored ? '-' : '未评分')}
                   </span>
                   {!it.scored && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/10 text-gray-400">LLM 未评分</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-panel-2/10 text-ink-muted">LLM 未评分</span>
                   )}
                   <StatusBadge status={it.status} />
-                  {it.agent_name && <span className="text-xs text-gray-500">客服：{it.agent_name}</span>}
+                  {it.agent_name && <span className="text-xs text-ink-subtle">客服：{it.agent_name}</span>}
                 </div>
-                <p className="text-sm text-gray-500 truncate">
+                <p className="text-sm text-ink-subtle truncate">
                   {maskSessionId(it.session_id)} · {it.config_name || '默认'}
                   {it.violations && it.violations.length > 0 && ` · 违规 ${it.violations.length} 项`}
                 </p>
               </div>
-              <ChevronLeft size={18} className="text-gray-500 ml-3 rotate-180" />
+              <ChevronLeft size={18} className="text-ink-subtle ml-3 rotate-180" />
             </div>
           ))}
           {/* Pagination */}
-          <div className="flex items-center justify-center gap-3 pt-2 text-sm text-gray-400">
-            <button disabled={page <= 1} onClick={() => onPage(page - 1)} className="px-3 py-1 rounded hover:bg-dark-700 disabled:opacity-40">上一页</button>
+          <div className="flex items-center justify-center gap-3 pt-2 text-sm text-ink-muted">
+            <button disabled={page <= 1} onClick={() => onPage(page - 1)} className="px-3 py-1 rounded hover:bg-panel-2 disabled:opacity-40">上一页</button>
             <span>第 {page} 页 / 共 {Math.max(1, Math.ceil(total / 20))} 页（{total}）</span>
-            <button disabled={page >= Math.ceil(total / 20)} onClick={() => onPage(page + 1)} className="px-3 py-1 rounded hover:bg-dark-700 disabled:opacity-40">下一页</button>
+            <button disabled={page >= Math.ceil(total / 20)} onClick={() => onPage(page + 1)} className="px-3 py-1 rounded hover:bg-panel-2 disabled:opacity-40">下一页</button>
           </div>
         </div>
       )}
@@ -368,22 +399,13 @@ function ResultsTab(props: any) {
   )
 }
 
-function StatCard({ label, value, color }: { label: string; value: any; color?: string }) {
-  return (
-    <div className="bg-dark-800 rounded-xl border border-dark-600 p-4">
-      <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <p className={cn('text-2xl font-bold', color || 'text-white')}>{value}</p>
-    </div>
-  )
-}
-
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    pending: 'text-yellow-400 bg-yellow-500/10',
-    reviewed: 'text-green-400 bg-green-500/10',
+    pending: 'text-warn bg-warn/10',
+    reviewed: 'text-ok bg-ok/10',
   }
   return (
-    <span className={cn('text-xs px-2 py-0.5 rounded-full', map[status] || 'text-gray-400 bg-gray-500/10')}>
+    <span className={cn('text-xs px-2 py-0.5 rounded-full', map[status] || 'text-ink-muted bg-panel-2/10')}>
       {status === 'pending' ? '待复核' : status === 'reviewed' ? '已复核' : status}
     </span>
   )
@@ -394,7 +416,7 @@ function FilterSelect({ value, onChange, options }: { value: string; onChange: (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="bg-dark-700 border border-dark-500 rounded-lg px-3 py-1.5 text-sm text-gray-200"
+      className="bg-panel-2 border border-line-strong rounded-lg px-3 py-1.5 text-sm text-ink"
     >
       {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
@@ -425,63 +447,63 @@ function DetailDrawer({ inspection, dimNameMap, onClose, onReviewed }: any) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-scrim/50" onClick={onClose}>
       <div
-        className="w-full max-w-2xl h-full bg-dark-900 border-l border-dark-600 overflow-y-auto p-6 space-y-5"
+        className="w-full max-w-2xl h-full bg-canvas border-l border-line overflow-y-auto p-6 space-y-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <ShieldCheck size={20} className="text-accent-primary" /> 质检详情 #{inspection.id}
+          <h2 className="text-lg font-bold text-ink flex items-center gap-2">
+            <ShieldCheck size={20} className="text-iris" /> 质检详情 #{inspection.id}
           </h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-dark-700 text-gray-400">✕</button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-panel-2 text-ink-muted">✕</button>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="bg-dark-800 rounded-xl border border-dark-600 p-5 text-center flex-1">
-            <p className="text-xs text-gray-500 mb-1">AI 初评分</p>
+          <div className="bg-panel rounded-xl border border-line p-5 text-center flex-1">
+            <p className="text-xs text-ink-subtle mb-1">AI 初评分</p>
             <p className={cn('text-4xl font-bold', scoreColor(inspection.overall_score))}>
               {inspection.overall_score != null ? inspection.overall_score : (inspection.scored ? '-' : '未评分')}
             </p>
           </div>
-          <div className="bg-dark-800 rounded-xl border border-dark-600 p-5 text-center flex-1">
-            <p className="text-xs text-gray-500 mb-1">人工复核分（终评）</p>
+          <div className="bg-panel rounded-xl border border-line p-5 text-center flex-1">
+            <p className="text-xs text-ink-subtle mb-1">人工复核分（终评）</p>
             <p className={cn('text-4xl font-bold', scoreColor(inspection.human_override_score))}>
               {inspection.human_override_score != null ? inspection.human_override_score : '-'}
             </p>
           </div>
         </div>
-        <p className="text-xs text-gray-500 -mt-3">AI 初评仅供参考，最终质量判定以人工复核为准。</p>
+        <p className="text-xs text-ink-subtle -mt-3">AI 初评仅供参考，最终质量判定以人工复核为准。</p>
 
         {/* Dimension bars */}
-        <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 space-y-2">
-          <h3 className="text-sm font-medium text-gray-300 mb-1">维度评分</h3>
+        <div className="bg-panel rounded-xl border border-line p-4 space-y-2">
+          <h3 className="text-sm font-medium text-ink mb-1">维度评分</h3>
           {Object.entries(scores).map(([k, v]) => (
             <div key={k} className="flex items-center gap-3">
-              <span className="w-20 text-xs text-gray-400">{dimNameMap[k] || k}</span>
-              <div className="flex-1 h-2 bg-dark-700 rounded-full overflow-hidden">
-                <div className={cn('h-full rounded-full', v >= 80 ? 'bg-green-500' : v >= 60 ? 'bg-yellow-500' : 'bg-red-500')} style={{ width: `${v}%` }} />
+              <span className="w-20 text-xs text-ink-muted">{dimNameMap[k] || k}</span>
+              <div className="flex-1 h-2 bg-panel-2 rounded-full overflow-hidden">
+                <div className={cn('h-full rounded-full', v >= 80 ? 'bg-ok' : v >= 60 ? 'bg-warn' : 'bg-bad')} style={{ width: `${v}%` }} />
               </div>
               <span className={cn('w-10 text-right text-xs font-medium', scoreColor(v))}>{v}</span>
             </div>
           ))}
-          {Object.keys(scores).length === 0 && <p className="text-sm text-gray-500">无维度评分</p>}
+          {Object.keys(scores).length === 0 && <p className="text-sm text-ink-subtle">无维度评分</p>}
         </div>
 
         {/* Violations */}
         {inspection.violations && inspection.violations.length > 0 && (
-          <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 space-y-3">
-            <h3 className="text-sm font-medium text-gray-300 flex items-center gap-2">
-              <AlertTriangle size={16} className="text-red-400" /> 违规项（{inspection.violations.length}）
+          <div className="bg-panel rounded-xl border border-line p-4 space-y-3">
+            <h3 className="text-sm font-medium text-ink flex items-center gap-2">
+              <AlertTriangle size={16} className="text-bad" /> 违规项（{inspection.violations.length}）
             </h3>
             {inspection.violations.map((v: any, i: number) => (
-              <div key={i} className={cn('rounded-lg p-3 border', SEVERITY_COLORS[v.severity] || 'border-dark-600')}>
+              <div key={i} className={cn('rounded-lg p-3 border', SEVERITY_COLORS[v.severity] || 'border-line')}>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-medium">{v.type}</span>
                   {v.severity && <span className="text-xs opacity-70">· {v.severity}</span>}
                 </div>
-                {v.evidence && <p className="text-xs text-gray-400 mb-1">证据："{v.evidence}"</p>}
-                {v.suggestion && <p className="text-xs text-gray-300">建议：{v.suggestion}</p>}
+                {v.evidence && <p className="text-xs text-ink-muted mb-1">证据："{v.evidence}"</p>}
+                {v.suggestion && <p className="text-xs text-ink">建议：{v.suggestion}</p>}
               </div>
             ))}
           </div>
@@ -489,11 +511,11 @@ function DetailDrawer({ inspection, dimNameMap, onClose, onReviewed }: any) {
 
         {/* Conversation snapshot */}
         {inspection.conversation_snapshot && (
-          <div className="bg-dark-800 rounded-xl border border-dark-600 p-4">
-            <h3 className="text-sm font-medium text-gray-300 mb-2">对话快照（已脱敏）</h3>
+          <div className="bg-panel rounded-xl border border-line p-4">
+            <h3 className="text-sm font-medium text-ink mb-2">对话快照（已脱敏）</h3>
             <div className="space-y-1 max-h-64 overflow-y-auto text-sm">
               {inspection.conversation_snapshot.map((m: any, i: number) => (
-                <p key={i} className={m.role === 'assistant' ? 'text-accent-primary/90' : 'text-gray-300'}>
+                <p key={i} className={m.role === 'assistant' ? 'text-iris/90' : 'text-ink'}>
                   <span className="font-medium">{m.speaker || (m.role === 'assistant' ? '客服' : '客户')}：</span>
                   {m.content}
                 </p>
@@ -504,58 +526,58 @@ function DetailDrawer({ inspection, dimNameMap, onClose, onReviewed }: any) {
 
         {/* Summary & suggestions */}
         {inspection.summary && (
-          <div className="bg-dark-800 rounded-xl border border-dark-600 p-4">
-            <h3 className="text-sm font-medium text-gray-300 mb-1">总体评价</h3>
-            <p className="text-sm text-gray-300 whitespace-pre-wrap">{inspection.summary}</p>
+          <div className="bg-panel rounded-xl border border-line p-4">
+            <h3 className="text-sm font-medium text-ink mb-1">总体评价</h3>
+            <p className="text-sm text-ink whitespace-pre-wrap">{inspection.summary}</p>
           </div>
         )}
         {inspection.suggestions && (
-          <div className="bg-dark-800 rounded-xl border border-dark-600 p-4">
-            <h3 className="text-sm font-medium text-gray-300 mb-1">改进建议</h3>
-            <p className="text-sm text-gray-300 whitespace-pre-wrap">{inspection.suggestions}</p>
+          <div className="bg-panel rounded-xl border border-line p-4">
+            <h3 className="text-sm font-medium text-ink mb-1">改进建议</h3>
+            <p className="text-sm text-ink whitespace-pre-wrap">{inspection.suggestions}</p>
           </div>
         )}
 
         {/* Human review */}
         {!isReviewed ? (
-          <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 space-y-3">
-            <h3 className="text-sm font-medium text-gray-300 flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-yellow-400" /> 人工复核
+          <div className="bg-panel rounded-xl border border-line p-4 space-y-3">
+            <h3 className="text-sm font-medium text-ink flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-warn" /> 人工复核
             </h3>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">复核总分 (0-100，留空则用 AI 分)</label>
+              <label className="text-xs text-ink-muted mb-1 block">复核总分 (0-100，留空则用 AI 分)</label>
               <input
                 type="number" min={0} max={100}
                 value={humanScore}
                 onChange={(e) => setHumanScore(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-32 bg-dark-700 border border-dark-500 rounded-lg px-3 py-1.5 text-white focus:outline-none"
+                className="w-32 bg-panel-2 border border-line-strong rounded-lg px-3 py-1.5 text-ink focus:outline-none"
               />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">复核备注</label>
+              <label className="text-xs text-ink-muted mb-1 block">复核备注</label>
               <textarea
                 value={humanNotes}
                 onChange={(e) => setHumanNotes(e.target.value)}
                 rows={2}
-                className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-gray-200 text-sm focus:outline-none resize-none"
+                className="w-full bg-panel-2 border border-line-strong rounded-lg px-3 py-2 text-ink text-sm focus:outline-none resize-none"
               />
             </div>
-            {err && <p className="text-red-400 text-xs">{err}</p>}
+            {err && <p className="text-bad text-xs">{err}</p>}
             <button
               onClick={handleReview}
               disabled={saving}
-              className="px-4 py-2 bg-yellow-500 text-dark-900 rounded-lg hover:bg-yellow-400 disabled:opacity-50 text-sm font-medium flex items-center gap-1"
+              className="px-4 py-2 bg-warn text-canvas rounded-lg hover:bg-warn disabled:opacity-50 text-sm font-medium flex items-center gap-1"
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} 提交复核
             </button>
           </div>
         ) : (
-          <div className="bg-dark-800 rounded-xl border border-yellow-500/20 p-4">
-            <h3 className="text-sm font-medium text-gray-300 mb-1 flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-green-400" /> 已复核
+          <div className="bg-panel rounded-xl border border-warn/20 p-4">
+            <h3 className="text-sm font-medium text-ink mb-1 flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-ok" /> 已复核
             </h3>
-            <p className="text-xs text-gray-500">复核人：{inspection.reviewer || '未知'} · {inspection.reviewed_at || ''}</p>
-            {inspection.human_notes && <p className="text-sm text-gray-300 mt-1 whitespace-pre-wrap">{inspection.human_notes}</p>}
+            <p className="text-xs text-ink-subtle">复核人：{inspection.reviewer || '未知'} · {inspection.reviewed_at || ''}</p>
+            {inspection.human_notes && <p className="text-sm text-ink mt-1 whitespace-pre-wrap">{inspection.human_notes}</p>}
           </div>
         )}
       </div>
@@ -571,14 +593,14 @@ function InsightsTab({ feedback, onOpenDetail, onRefresh }: {
 }) {
   if (!feedback) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-500">
+      <div className="flex-1 flex items-center justify-center text-ink-subtle">
         <Loader2 size={32} className="animate-spin" />
       </div>
     )
   }
   if (feedback.total === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
+      <div className="flex-1 flex flex-col items-center justify-center text-ink-subtle">
         <Lightbulb size={48} className="mb-4 opacity-30" />
         <p>暂无质检数据，无法生成优化洞察。先去做几次质检吧。</p>
       </div>
@@ -587,10 +609,10 @@ function InsightsTab({ feedback, onOpenDetail, onRefresh }: {
 
   const opt = feedback.optimization || {}
   const optCards: { title: string; items: string[]; cls: string }[] = [
-    { title: '培训素材', items: opt.training_materials || [], cls: 'border-blue-500/30 text-blue-300' },
-    { title: '客服话术', items: opt.scripts || [], cls: 'border-green-500/30 text-green-300' },
-    { title: '知识库切片', items: opt.knowledge_slices || [], cls: 'border-purple-500/30 text-purple-300' },
-    { title: '内容生产方向', items: opt.content_direction || [], cls: 'border-yellow-500/30 text-yellow-300' },
+    { title: '培训素材', items: opt.training_materials || [], cls: 'border-iris/30 text-info' },
+    { title: '客服话术', items: opt.scripts || [], cls: 'border-ok/30 text-ok' },
+    { title: '知识库切片', items: opt.knowledge_slices || [], cls: 'border-iris/30 text-iris' },
+    { title: '内容生产方向', items: opt.content_direction || [], cls: 'border-warn/30 text-warn' },
   ]
   const maxDim = Math.max(1, ...feedback.weak_dimensions.map((d) => d.avg))
 
@@ -598,30 +620,30 @@ function InsightsTab({ feedback, onOpenDetail, onRefresh }: {
     <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Lightbulb size={20} className="text-accent-primary" /> 优化洞察（数据回流）
+          <h2 className="text-lg font-bold text-ink flex items-center gap-2">
+            <Lightbulb size={20} className="text-iris" /> 优化洞察（数据回流）
           </h2>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-ink-subtle mt-1">
             聚合错题场景、低分维度、主管复核与高频问题，反向指导培训素材 / 话术 / 知识库 / 内容方向。
           </p>
         </div>
-        <button onClick={onRefresh} className="p-2 rounded-lg hover:bg-dark-700 text-gray-400" title="刷新">
+        <button onClick={onRefresh} className="p-2 rounded-lg hover:bg-panel-2 text-ink-muted" title="刷新">
           <RefreshCw size={18} />
         </button>
       </div>
 
       {/* 低分维度 */}
-      <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 space-y-2">
-        <h3 className="text-sm font-medium text-gray-300 mb-1 flex items-center gap-2">
-          <BarChart3 size={16} className="text-accent-primary" /> 低分维度（越靠上越薄弱）
+      <div className="bg-panel rounded-xl border border-line p-4 space-y-2">
+        <h3 className="text-sm font-medium text-ink mb-1 flex items-center gap-2">
+          <BarChart3 size={16} className="text-iris" /> 低分维度（越靠上越薄弱）
         </h3>
-        {feedback.weak_dimensions.length === 0 && <p className="text-sm text-gray-500">暂无维度评分数据</p>}
+        {feedback.weak_dimensions.length === 0 && <p className="text-sm text-ink-subtle">暂无维度评分数据</p>}
         {feedback.weak_dimensions.map((d) => (
           <div key={d.key} className="flex items-center gap-3">
-            <span className="w-24 text-xs text-gray-400">{d.name}</span>
-            <div className="flex-1 h-2.5 bg-dark-700 rounded-full overflow-hidden">
+            <span className="w-24 text-xs text-ink-muted">{d.name}</span>
+            <div className="flex-1 h-2.5 bg-panel-2 rounded-full overflow-hidden">
               <div
-                className={cn('h-full rounded-full', d.avg >= 80 ? 'bg-green-500' : d.avg >= 60 ? 'bg-yellow-500' : 'bg-red-500')}
+                className={cn('h-full rounded-full', d.avg >= 80 ? 'bg-ok' : d.avg >= 60 ? 'bg-warn' : 'bg-bad')}
                 style={{ width: `${(d.avg / maxDim) * 100}%` }}
               />
             </div>
@@ -632,53 +654,53 @@ function InsightsTab({ feedback, onOpenDetail, onRefresh }: {
 
       {/* 高频违规 + 培训问题 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-dark-800 rounded-xl border border-dark-600 p-4">
-          <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-            <AlertTriangle size={16} className="text-yellow-400" /> 高频违规 TOP
+        <div className="bg-panel rounded-xl border border-line p-4">
+          <h3 className="text-sm font-medium text-ink mb-3 flex items-center gap-2">
+            <AlertTriangle size={16} className="text-warn" /> 高频违规 TOP
           </h3>
           <div className="flex flex-wrap gap-2">
             {feedback.top_violations.map((v) => (
-              <span key={v.type} className="px-2.5 py-1 rounded-full bg-red-500/10 text-red-300 text-xs border border-red-500/20">
+              <span key={v.type} className="px-2.5 py-1 rounded-full bg-bad/10 text-bad text-xs border border-bad/20">
                 {v.type} · {v.count}
               </span>
             ))}
-            {feedback.top_violations.length === 0 && <p className="text-sm text-gray-500">无违规记录</p>}
+            {feedback.top_violations.length === 0 && <p className="text-sm text-ink-subtle">无违规记录</p>}
           </div>
         </div>
-        <div className="bg-dark-800 rounded-xl border border-dark-600 p-4">
-          <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-            <ClipboardList size={16} className="text-accent-primary" /> 高频培训问题
+        <div className="bg-panel rounded-xl border border-line p-4">
+          <h3 className="text-sm font-medium text-ink mb-3 flex items-center gap-2">
+            <ClipboardList size={16} className="text-iris" /> 高频培训问题
           </h3>
-          <ul className="space-y-1.5 text-sm text-gray-300 list-disc list-inside">
+          <ul className="space-y-1.5 text-sm text-ink list-disc list-inside">
             {feedback.training_topics.map((t, i) => <li key={i}>{t}</li>)}
-            {feedback.training_topics.length === 0 && <p className="text-gray-500">暂无可提炼的培训问题</p>}
+            {feedback.training_topics.length === 0 && <p className="text-ink-subtle">暂无可提炼的培训问题</p>}
           </ul>
         </div>
       </div>
 
       {/* 错题场景 */}
-      <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 space-y-2">
-        <h3 className="text-sm font-medium text-gray-300 mb-1">错题场景（低分 / 含违规的会话，点击查看详情）</h3>
-        {feedback.wrong_cases.length === 0 && <p className="text-sm text-gray-500">暂无错题场景</p>}
+      <div className="bg-panel rounded-xl border border-line p-4 space-y-2">
+        <h3 className="text-sm font-medium text-ink mb-1">错题场景（低分 / 含违规的会话，点击查看详情）</h3>
+        {feedback.wrong_cases.length === 0 && <p className="text-sm text-ink-subtle">暂无错题场景</p>}
         {feedback.wrong_cases.map((c) => (
           <div
             key={c.inspection_id}
             onClick={() => onOpenDetail(c.inspection_id)}
-            className="flex items-center justify-between p-2.5 rounded-lg bg-dark-900/40 hover:bg-dark-700 cursor-pointer"
+            className="flex items-center justify-between p-2.5 rounded-lg bg-canvas/40 hover:bg-panel-2 cursor-pointer"
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className={cn('text-sm font-bold', scoreColor(c.overall_score))}>
                   {c.overall_score != null ? c.overall_score : '未评分'}
                 </span>
-                {c.weak_dimension && <span className="text-xs text-gray-500">最弱：{c.weak_dimension}</span>}
-                {c.agent_name && <span className="text-xs text-gray-500">客服：{c.agent_name}</span>}
+                {c.weak_dimension && <span className="text-xs text-ink-subtle">最弱：{c.weak_dimension}</span>}
+                {c.agent_name && <span className="text-xs text-ink-subtle">客服：{c.agent_name}</span>}
               </div>
-              <p className="text-xs text-gray-500 truncate">{maskSessionId(c.session_id)}</p>
+              <p className="text-xs text-ink-subtle truncate">{maskSessionId(c.session_id)}</p>
             </div>
             <div className="flex gap-1 shrink-0 ml-3">
               {c.violations.map((v) => (
-                <span key={v} className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-300 text-[10px] border border-red-500/20">{v}</span>
+                <span key={v} className="px-2 py-0.5 rounded-full bg-bad/10 text-bad text-[10px] border border-bad/20">{v}</span>
               ))}
             </div>
           </div>
@@ -687,22 +709,22 @@ function InsightsTab({ feedback, onOpenDetail, onRefresh }: {
 
       {/* 主管复核修正 */}
       {feedback.supervisor_corrections.length > 0 && (
-        <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 space-y-2">
-          <h3 className="text-sm font-medium text-gray-300 mb-1">主管复核修正（AI 分 → 人工终评分）</h3>
+        <div className="bg-panel rounded-xl border border-line p-4 space-y-2">
+          <h3 className="text-sm font-medium text-ink mb-1">主管复核修正（AI 分 → 人工终评分）</h3>
           {feedback.supervisor_corrections.map((c) => (
-            <div key={c.inspection_id} className="p-2.5 rounded-lg bg-dark-900/40 space-y-1">
+            <div key={c.inspection_id} className="p-2.5 rounded-lg bg-canvas/40 space-y-1">
               <div className="flex items-center gap-2 text-sm">
                 <span className={cn('font-bold', scoreColor(c.ai_score))}>AI {c.ai_score ?? '-'}</span>
-                <ChevronLeft size={14} className="rotate-180 text-gray-500" />
+                <ChevronLeft size={14} className="rotate-180 text-ink-subtle" />
                 <span className={cn('font-bold', scoreColor(c.human_score))}>人工 {c.human_score}</span>
                 {c.delta != null && (
-                  <span className={cn('text-xs', c.delta < 0 ? 'text-red-400' : c.delta > 0 ? 'text-green-400' : 'text-gray-400')}>
+                  <span className={cn('text-xs', c.delta < 0 ? 'text-bad' : c.delta > 0 ? 'text-ok' : 'text-ink-muted')}>
                     ({c.delta > 0 ? '+' : ''}{c.delta})
                   </span>
                 )}
-                <span className="text-xs text-gray-500 ml-auto">{maskSessionId(c.session_id)}</span>
+                <span className="text-xs text-ink-subtle ml-auto">{maskSessionId(c.session_id)}</span>
               </div>
-              {c.human_notes && <p className="text-xs text-gray-400">复核备注：{c.human_notes}</p>}
+              {c.human_notes && <p className="text-xs text-ink-muted">复核备注：{c.human_notes}</p>}
             </div>
           ))}
         </div>
@@ -710,16 +732,16 @@ function InsightsTab({ feedback, onOpenDetail, onRefresh }: {
 
       {/* 反向优化建议 */}
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-gray-300 flex items-center gap-2">
-          <Lightbulb size={16} className="text-yellow-400" /> 反向优化建议
+        <h3 className="text-sm font-medium text-ink flex items-center gap-2">
+          <Lightbulb size={16} className="text-warn" /> 反向优化建议
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {optCards.map((card) => (
-            <div key={card.title} className={cn('bg-dark-800 rounded-xl border p-4', card.cls)}>
+            <div key={card.title} className={cn('bg-panel rounded-xl border p-4', card.cls)}>
               <h4 className="text-sm font-semibold mb-2">{card.title}</h4>
               <ul className="space-y-1 text-xs list-disc list-inside">
                 {card.items.map((it, i) => <li key={i}>{it}</li>)}
-                {card.items.length === 0 && <li className="text-gray-500 list-none">暂无建议</li>}
+                {card.items.length === 0 && <li className="text-ink-subtle list-none">暂无建议</li>}
               </ul>
             </div>
           ))}
@@ -823,7 +845,7 @@ function ConfigFormTab({ onChanged }: { onChanged: () => void }) {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-500">
+      <div className="flex-1 flex items-center justify-center text-ink-subtle">
         <Loader2 size={32} className="animate-spin" />
       </div>
     )
@@ -833,135 +855,135 @@ function ConfigFormTab({ onChanged }: { onChanged: () => void }) {
     <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <ListChecks size={20} className="text-accent-primary" /> 质检规则配置
+          <h2 className="text-lg font-bold text-ink flex items-center gap-2">
+            <ListChecks size={20} className="text-iris" /> 质检规则配置
           </h2>
-          <p className="text-xs text-gray-500 mt-1">系统中只维护这一套标准，所有质检都会使用它。无需编写 JSON，直接填表即可。</p>
+          <p className="text-xs text-ink-subtle mt-1">系统中只维护这一套标准，所有质检都会使用它。无需编写 JSON，直接填表即可。</p>
         </div>
         <button
           onClick={handleSeed}
           disabled={saving}
-          className="px-3 py-1.5 bg-dark-700 text-gray-200 rounded-lg hover:bg-dark-600 text-sm flex items-center gap-1 disabled:opacity-50"
+          className="px-3 py-1.5 bg-panel-2 text-ink rounded-lg hover:bg-line text-sm flex items-center gap-1 disabled:opacity-50"
         >
           <RotateCcw size={14} /> 恢复默认
         </button>
       </div>
 
       {err && (
-        <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm flex items-center gap-2">
+        <div className="px-4 py-2 bg-bad/10 border border-bad/30 rounded-lg text-bad text-sm flex items-center gap-2">
           <AlertCircle size={16} /> {err}
         </div>
       )}
       {msg && (
-        <div className="px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-lg text-green-400 text-sm flex items-center gap-2">
+        <div className="px-4 py-2 bg-ok/10 border border-ok/30 rounded-lg text-ok text-sm flex items-center gap-2">
           <CheckCircle2 size={16} /> {msg}
         </div>
       )}
 
       {/* 基本信息 */}
-      <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 space-y-4">
-        <div className="px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300">
+      <div className="bg-panel rounded-xl border border-line p-4 space-y-4">
+        <div className="px-3 py-2 rounded-lg bg-iris/10 border border-iris/20 text-xs text-info">
           AI 评分为「初评」工具，仅作参考；最终质量判定以人工复核为准。维度、权重、违规项、人设、及格线均可在此调整（评分模型与规则名称已按系统默认，无需填写）。
         </div>
         <div>
-          <label className="text-sm text-gray-400 mb-1 block">业务人设（描述客服所属的业务场景，越具体越准）</label>
+          <label className="text-sm text-ink-muted mb-1 block">业务人设（描述客服所属的业务场景，越具体越准）</label>
           <textarea
             value={persona}
             onChange={(e) => setPersona(e.target.value)}
             rows={2}
             placeholder="例如：你是示例商城的客服，负责解答用户关于霸王餐、返利提现、优惠券、积分兑换的咨询。"
-            className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-gray-200 text-sm focus:outline-none resize-none"
+            className="w-full bg-panel-2 border border-line-strong rounded-lg px-3 py-2 text-ink text-sm focus:outline-none resize-none"
           />
         </div>
         <div className="w-40">
-          <label className="text-sm text-gray-400 mb-1 block">及格线（0-100）</label>
+          <label className="text-sm text-ink-muted mb-1 block">及格线（0-100）</label>
           <input
             type="number" min={0} max={100}
             value={threshold}
             onChange={(e) => setThreshold(Number(e.target.value))}
-            className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none"
+            className="w-full bg-panel-2 border border-line-strong rounded-lg px-3 py-1.5 text-ink text-sm focus:outline-none"
           />
         </div>
       </div>
 
       {/* 维度 */}
-      <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 space-y-3">
+      <div className="bg-panel rounded-xl border border-line p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-200">评分维度</h3>
+          <h3 className="text-sm font-medium text-ink">评分维度</h3>
           <button
             onClick={() => setDims((p) => [...p, { name: '', weight: 20, description: '' }])}
-            className="px-3 py-1.5 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/80 text-sm flex items-center gap-1"
+            className="px-3 py-1.5 bg-iris text-ink rounded-lg hover:bg-iris/80 text-sm flex items-center gap-1"
           >
             <Plus size={14} /> 添加维度
           </button>
         </div>
         <div className="space-y-2">
           {dims.map((d, i) => (
-            <div key={i} className="flex items-start gap-2 bg-dark-900/40 rounded-lg p-3">
+            <div key={i} className="flex items-start gap-2 bg-canvas/40 rounded-lg p-3">
               <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-2">
                 <input
                   value={d.name}
                   onChange={(e) => setDims((p) => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
                   placeholder="维度名称，如 服务态度"
-                  className="md:col-span-3 bg-dark-700 border border-dark-500 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none"
+                  className="md:col-span-3 bg-panel-2 border border-line-strong rounded-lg px-3 py-1.5 text-ink text-sm focus:outline-none"
                 />
                 <div className="md:col-span-2 flex items-center gap-2">
                   <input
                     type="number" min={0} max={100}
                     value={d.weight}
                     onChange={(e) => setDims((p) => p.map((x, j) => j === i ? { ...x, weight: Number(e.target.value) } : x))}
-                    className="w-full bg-dark-700 border border-dark-500 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none"
+                    className="w-full bg-panel-2 border border-line-strong rounded-lg px-2 py-1.5 text-ink text-sm focus:outline-none"
                   />
-                  <span className="text-xs text-gray-500">%</span>
+                  <span className="text-xs text-ink-subtle">%</span>
                 </div>
                 <input
                   value={d.description}
                   onChange={(e) => setDims((p) => p.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
                   placeholder="评判要点（会喂给 AI，越具体越好）"
-                  className="md:col-span-7 bg-dark-700 border border-dark-500 rounded-lg px-3 py-1.5 text-gray-200 text-sm focus:outline-none"
+                  className="md:col-span-7 bg-panel-2 border border-line-strong rounded-lg px-3 py-1.5 text-ink text-sm focus:outline-none"
                 />
               </div>
               <button
                 onClick={() => setDims((p) => p.filter((_, j) => j !== i))}
-                className="p-1.5 rounded-lg hover:bg-dark-600 text-gray-500 hover:text-red-400"
+                className="p-1.5 rounded-lg hover:bg-line text-ink-subtle hover:text-bad"
                 title="删除"
               >
                 <Trash2 size={16} />
               </button>
             </div>
           ))}
-          {dims.length === 0 && <p className="text-sm text-gray-500">暂无维度，点击「添加维度」。</p>}
+          {dims.length === 0 && <p className="text-sm text-ink-subtle">暂无维度，点击「添加维度」。</p>}
         </div>
-        <p className={cn('text-xs', Math.round(totalWeight) === 100 ? 'text-gray-500' : 'text-yellow-400')}>
+        <p className={cn('text-xs', Math.round(totalWeight) === 100 ? 'text-ink-subtle' : 'text-warn')}>
           权重合计：{Math.round(totalWeight)}%（建议合计为 100%）
         </p>
       </div>
 
       {/* 违规项 */}
-      <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 space-y-3">
+      <div className="bg-panel rounded-xl border border-line p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-200">违规项</h3>
+          <h3 className="text-sm font-medium text-ink">违规项</h3>
           <button
             onClick={() => setViols((p) => [...p, { name: '', severity: 'medium', description: '' }])}
-            className="px-3 py-1.5 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/80 text-sm flex items-center gap-1"
+            className="px-3 py-1.5 bg-iris text-ink rounded-lg hover:bg-iris/80 text-sm flex items-center gap-1"
           >
             <Plus size={14} /> 添加违规项
           </button>
         </div>
         <div className="space-y-2">
           {viols.map((v, i) => (
-            <div key={i} className="flex items-start gap-2 bg-dark-900/40 rounded-lg p-3">
+            <div key={i} className="flex items-start gap-2 bg-canvas/40 rounded-lg p-3">
               <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-2">
                 <input
                   value={v.name}
                   onChange={(e) => setViols((p) => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
                   placeholder="违规名称，如 隐私泄露"
-                  className="md:col-span-3 bg-dark-700 border border-dark-500 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none"
+                  className="md:col-span-3 bg-panel-2 border border-line-strong rounded-lg px-3 py-1.5 text-ink text-sm focus:outline-none"
                 />
                 <select
                   value={v.severity}
                   onChange={(e) => setViols((p) => p.map((x, j) => j === i ? { ...x, severity: e.target.value } : x))}
-                  className="md:col-span-2 bg-dark-700 border border-dark-500 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none"
+                  className="md:col-span-2 bg-panel-2 border border-line-strong rounded-lg px-2 py-1.5 text-ink text-sm focus:outline-none"
                 >
                   {SEVERITY_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
@@ -969,19 +991,19 @@ function ConfigFormTab({ onChanged }: { onChanged: () => void }) {
                   value={v.description}
                   onChange={(e) => setViols((p) => p.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
                   placeholder="说明（会喂给 AI 识别）"
-                  className="md:col-span-7 bg-dark-700 border border-dark-500 rounded-lg px-3 py-1.5 text-gray-200 text-sm focus:outline-none"
+                  className="md:col-span-7 bg-panel-2 border border-line-strong rounded-lg px-3 py-1.5 text-ink text-sm focus:outline-none"
                 />
               </div>
               <button
                 onClick={() => setViols((p) => p.filter((_, j) => j !== i))}
-                className="p-1.5 rounded-lg hover:bg-dark-600 text-gray-500 hover:text-red-400"
+                className="p-1.5 rounded-lg hover:bg-line text-ink-subtle hover:text-bad"
                 title="删除"
               >
                 <Trash2 size={16} />
               </button>
             </div>
           ))}
-          {viols.length === 0 && <p className="text-sm text-gray-500">暂无违规项，点击「添加违规项」。</p>}
+          {viols.length === 0 && <p className="text-sm text-ink-subtle">暂无违规项，点击「添加违规项」。</p>}
         </div>
       </div>
 
@@ -989,14 +1011,14 @@ function ConfigFormTab({ onChanged }: { onChanged: () => void }) {
         <button
           onClick={save}
           disabled={saving}
-          className="px-5 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/80 disabled:opacity-50 text-sm font-medium flex items-center gap-1"
+          className="px-5 py-2 bg-iris text-ink rounded-lg hover:bg-iris/80 disabled:opacity-50 text-sm font-medium flex items-center gap-1"
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} 保存配置
         </button>
         <button
           onClick={load}
           disabled={saving}
-          className="px-4 py-2 bg-dark-700 text-gray-200 rounded-lg hover:bg-dark-600 disabled:opacity-50 text-sm"
+          className="px-4 py-2 bg-panel-2 text-ink rounded-lg hover:bg-line disabled:opacity-50 text-sm"
         >
           取消修改
         </button>

@@ -193,23 +193,23 @@ export default function ChatView({ session, targetMessageId, onTargetReached }: 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* 头部 */}
-      <header className="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-dark-600 bg-dark-800/80 backdrop-blur-sm flex-shrink-0">
+      <header className="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-line bg-panel/80 backdrop-blur-sm flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className={cn(
-            'w-10 h-10 rounded-full flex items-center justify-center text-white font-medium bg-gradient-to-br flex-shrink-0',
+            'w-10 h-10 rounded-full flex items-center justify-center text-ink font-medium bg-gradient-to-br flex-shrink-0',
             getAvatarColor(displayName)
           )}>
             {session.is_chatroom ? <Users size={18} /> : getInitials(displayName)}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-medium text-white truncate">{displayName}</h2>
-            <p className="text-xs text-gray-500 truncate">
+            <h2 className="font-medium text-ink truncate">{displayName}</h2>
+            <p className="text-xs text-ink-subtle truncate">
               {session.message_count} 条消息
               {session.is_chatroom && ' · 群聊'}
             </p>
           </div>
         </div>
-        <button className="p-2 rounded-lg hover:bg-dark-600 text-gray-400 hover:text-white transition-colors flex-shrink-0">
+        <button className="p-2 rounded-lg hover:bg-line text-ink-muted hover:text-ink transition-colors flex-shrink-0">
           <MoreVertical size={18} />
         </button>
       </header>
@@ -223,8 +223,8 @@ export default function ChatView({ session, targetMessageId, onTargetReached }: 
         {/* 加载更多指示器 */}
         {loadingMore && (
           <div className="text-center py-3">
-            <div className="inline-flex items-center gap-2 text-sm text-gray-500">
-              <div className="w-4 h-4 border-2 border-accent-primary/30 border-t-accent-primary rounded-full animate-spin" />
+            <div className="inline-flex items-center gap-2 text-sm text-ink-subtle">
+              <div className="w-4 h-4 border-2 border-iris/30 border-t-iris rounded-full animate-spin" />
               加载更多...
             </div>
           </div>
@@ -236,7 +236,7 @@ export default function ChatView({ session, targetMessageId, onTargetReached }: 
               const { nextPage } = getHistoryRequestPage({ currentPage: page, reset: false })
               loadMessages(false, nextPage)
             }}
-            className="w-full py-2 text-sm text-accent-primary hover:text-accent-secondary transition-colors"
+            className="w-full py-2 text-sm text-iris hover:text-flare transition-colors"
           >
             <ChevronUp size={16} className="inline mr-1" />
             加载更早消息
@@ -246,13 +246,13 @@ export default function ChatView({ session, targetMessageId, onTargetReached }: 
         {loading ? (
           <div className="flex-1 flex items-center justify-center py-20">
             <div className="text-center">
-              <div className="w-8 h-8 border-2 border-accent-primary/30 border-t-accent-primary rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-gray-500 text-sm">加载中...</p>
+              <div className="w-8 h-8 border-2 border-iris/30 border-t-iris rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-ink-subtle text-sm">加载中...</p>
             </div>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex-1 flex items-center justify-center py-20">
-            <p className="text-gray-500">暂无消息</p>
+            <p className="text-ink-subtle">暂无消息</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -272,7 +272,7 @@ export default function ChatView({ session, targetMessageId, onTargetReached }: 
       {showScrollBottom && (
         <button
           onClick={scrollToBottom}
-          className="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-accent-primary text-white shadow-lg hover:bg-accent-secondary transition-colors flex items-center justify-center"
+          className="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-iris text-ink shadow-lg hover:bg-flare transition-colors flex items-center justify-center"
         >
           <ArrowDown size={18} />
         </button>
@@ -305,7 +305,7 @@ function MessageBubble({ message, showDate, isHighlighted }: MessageBubbleProps)
       {/* 日期分隔 */}
       {showDate && (
         <div className="flex items-center justify-center py-3">
-          <span className="px-3 py-1 text-xs text-gray-500 bg-dark-700 rounded-full">
+          <span className="px-3 py-1 text-xs text-ink-subtle bg-panel-2 rounded-full">
             {formatDateTime(message.timestamp).split(' ')[0]}
           </span>
         </div>
@@ -322,7 +322,7 @@ function MessageBubble({ message, showDate, isHighlighted }: MessageBubbleProps)
       >
         {/* 头像 */}
         <div className={cn(
-          'w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-medium bg-gradient-to-br flex-shrink-0',
+          'w-9 h-9 rounded-full flex items-center justify-center text-ink text-sm font-medium bg-gradient-to-br flex-shrink-0',
           avatarColor
         )}>
           {getInitials(senderName)}
@@ -335,7 +335,7 @@ function MessageBubble({ message, showDate, isHighlighted }: MessageBubbleProps)
         )}>
           {/* 发送者名称 */}
           {!message.is_sender && (
-            <div className="text-xs text-gray-500 mb-1 px-1 truncate max-w-full">
+            <div className="text-xs text-ink-subtle mb-1 px-1 truncate max-w-full">
               {senderName}
             </div>
           )}
@@ -344,8 +344,8 @@ function MessageBubble({ message, showDate, isHighlighted }: MessageBubbleProps)
           <div className={cn(
             'px-4 py-2.5 rounded-2xl text-sm break-words overflow-hidden relative',
             message.is_sender
-              ? 'bg-accent-primary text-white rounded-br-md shadow-sm'
-              : 'bg-dark-600 text-gray-200 rounded-bl-md shadow-sm',
+              ? 'bg-iris text-ink rounded-br-md shadow-sm'
+              : 'bg-line text-ink rounded-bl-md shadow-sm',
             message.msg_type === MSG_TYPES.VOICE ? 'p-1.5' : '' // 为语音消息减少内边距
           )}>
             {isText ? (
@@ -353,8 +353,8 @@ function MessageBubble({ message, showDate, isHighlighted }: MessageBubbleProps)
             ) : message.msg_type === MSG_TYPES.VOICE ? (
               <VoicePlayer message={message} />
             ) : (
-              <div className="flex items-center gap-2 text-gray-400 flex-wrap">
-                <span className="text-xs px-2 py-0.5 bg-dark-500 rounded flex-shrink-0">
+              <div className="flex items-center gap-2 text-ink-muted flex-wrap">
+                <span className="text-xs px-2 py-0.5 bg-line-strong rounded flex-shrink-0">
                   {getMsgTypeLabel(message.msg_type)}
                 </span>
                 <span className="text-xs opacity-70 truncate">
@@ -366,7 +366,7 @@ function MessageBubble({ message, showDate, isHighlighted }: MessageBubbleProps)
 
           {/* 时间 */}
           <div className={cn(
-            'text-xs text-gray-600 mt-1 px-1 opacity-0 group-hover:opacity-100 transition-opacity',
+            'text-xs text-ink-subtle mt-1 px-1 opacity-0 group-hover:opacity-100 transition-opacity',
             message.is_sender ? 'text-right' : 'text-left'
           )}>
             {formatTime(message.timestamp)}
@@ -440,7 +440,7 @@ function VoicePlayer({ message }: { message: Message }) {
     <div 
       className={cn(
         "flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer select-none transition-all active:scale-[0.98]",
-        message.is_sender ? "bg-white/10 hover:bg-white/15" : "bg-dark-500 hover:bg-dark-400",
+        message.is_sender ? "bg-ink/10 hover:bg-ink/15" : "bg-line-strong hover:bg-ink-subtle",
         !message.voice_path && "opacity-60 cursor-not-allowed grayscale"
       )}
       onClick={togglePlay}
@@ -448,8 +448,8 @@ function VoicePlayer({ message }: { message: Message }) {
       title={!message.voice_path ? '语音文件未找到' : '点击播放'}
     >
       <button className={cn(
-        "flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-white shadow-sm transition-transform",
-        message.is_sender ? "bg-white/20" : "bg-dark-400",
+        "flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-ink shadow-sm transition-transform",
+        message.is_sender ? "bg-ink/20" : "bg-ink-subtle",
         isPlaying && "scale-90"
       )}>
         {isPlaying ? (
@@ -482,7 +482,7 @@ function VoicePlayer({ message }: { message: Message }) {
       </span>
       
       {!message.voice_path && (
-        <span className="absolute -bottom-5 right-1 text-[10px] text-red-400 whitespace-nowrap hidden group-hover:block">
+        <span className="absolute -bottom-5 right-1 text-[10px] text-bad whitespace-nowrap hidden group-hover:block">
           文件丢失
         </span>
       )}

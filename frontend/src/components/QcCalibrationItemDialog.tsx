@@ -93,47 +93,47 @@ export default function QcCalibrationItemDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-scrim/50 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-dark-900 border border-dark-600 rounded-xl p-6 space-y-4"
+        className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-canvas border border-line rounded-xl p-6 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <CheckCircle2 size={20} className="text-accent-primary" /> 标记为标注数据
+          <h2 className="text-lg font-bold text-ink flex items-center gap-2">
+            <CheckCircle2 size={20} className="text-iris" /> 标记为标注数据
           </h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-dark-700 text-gray-400">
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-panel-2 text-ink-muted">
             <X size={18} />
           </button>
         </div>
 
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-ink-subtle">
           人工分数将作为该会话的「真值」冻结，用于校准 AI 质检的准确度。
         </p>
 
         {groups.length === 0 ? (
-          <div className="px-4 py-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-yellow-300 text-sm">
+          <div className="px-4 py-3 bg-warn/10 border border-warn/30 rounded-lg text-warn text-sm">
             还没有校准分组，请先在「校准对比」中新建一个分组。
           </div>
         ) : (
           <>
             <div>
-              <label className="text-sm text-gray-400 mb-1 block">校准分组</label>
+              <label className="text-sm text-ink-muted mb-1 block">校准分组</label>
               <select
                 value={groupId}
                 onChange={(e) => setGroupId(Number(e.target.value))}
-                className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-gray-200 text-sm focus:outline-none"
+                className="w-full bg-panel-2 border border-line-strong rounded-lg px-3 py-2 text-ink text-sm focus:outline-none"
               >
                 {groups.map((g) => <option key={g.id} value={g.id}>{g.name}（{g.item_count} 条）</option>)}
               </select>
             </div>
 
             <div>
-              <label className="text-sm text-gray-400 mb-1 block">
+              <label className="text-sm text-ink-muted mb-1 block">
                 {lockedSessionId ? '会话' : '会话 ID (session_id)'}
               </label>
               {lockedSessionId ? (
-                <div className="w-full bg-dark-900/40 border border-dark-600 rounded-lg px-3 py-2 text-gray-300 text-sm font-mono">
+                <div className="w-full bg-canvas/40 border border-line rounded-lg px-3 py-2 text-ink text-sm font-mono">
                   {maskSessionId(sessionId)}
                 </div>
               ) : (
@@ -141,38 +141,38 @@ export default function QcCalibrationItemDialog({
                   value={sessionId}
                   onChange={(e) => setSessionId(e.target.value)}
                   placeholder="微信会话 session_id"
-                  className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-gray-200 text-sm focus:outline-none"
+                  className="w-full bg-panel-2 border border-line-strong rounded-lg px-3 py-2 text-ink text-sm focus:outline-none"
                 />
               )}
               {(defaultStartTime || defaultEndTime) && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-ink-subtle mt-1">
                   已冻结时间窗：{defaultStartTime ?? '-'} ~ {defaultEndTime ?? '-'}（重跑将使用同一段对话）
                 </p>
               )}
             </div>
 
             <div className="w-40">
-              <label className="text-sm text-gray-400 mb-1 block">人工总分 (0-100)</label>
+              <label className="text-sm text-ink-muted mb-1 block">人工总分 (0-100)</label>
               <input
                 type="number" min={0} max={100}
                 value={goldTotal}
                 onChange={(e) => setGoldTotal(e.target.value)}
-                className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-white text-sm focus:outline-none"
+                className="w-full bg-panel-2 border border-line-strong rounded-lg px-3 py-2 text-ink text-sm focus:outline-none"
               />
             </div>
 
             {dims.length > 0 && (
               <div className="space-y-2">
-                <label className="text-sm text-gray-400 block">各维度人工分（可选，留空则不计入维度偏差）</label>
+                <label className="text-sm text-ink-muted block">各维度人工分（可选，留空则不计入维度偏差）</label>
                 <div className="grid grid-cols-2 gap-2">
                   {dims.map((d) => (
-                    <div key={d.key} className="flex items-center gap-2 bg-dark-800 rounded-lg px-3 py-2">
-                      <span className="text-xs text-gray-400 flex-1 truncate" title={d.name}>{d.name}</span>
+                    <div key={d.key} className="flex items-center gap-2 bg-panel rounded-lg px-3 py-2">
+                      <span className="text-xs text-ink-muted flex-1 truncate" title={d.name}>{d.name}</span>
                       <input
                         type="number" min={0} max={100}
                         value={dimScores[d.key] ?? ''}
                         onChange={(e) => setDimScores((p) => ({ ...p, [d.key]: e.target.value }))}
-                        className="w-20 bg-dark-700 border border-dark-500 rounded px-2 py-1 text-white text-xs focus:outline-none"
+                        className="w-20 bg-panel-2 border border-line-strong rounded px-2 py-1 text-ink text-xs focus:outline-none"
                       />
                     </div>
                   ))}
@@ -181,29 +181,29 @@ export default function QcCalibrationItemDialog({
             )}
 
             <div>
-              <label className="text-sm text-gray-400 mb-1 block">备注（可选）</label>
+              <label className="text-sm text-ink-muted mb-1 block">备注（可选）</label>
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={2}
-                className="w-full bg-dark-700 border border-dark-500 rounded-lg px-3 py-2 text-gray-200 text-sm focus:outline-none resize-none"
+                className="w-full bg-panel-2 border border-line-strong rounded-lg px-3 py-2 text-ink text-sm focus:outline-none resize-none"
               />
             </div>
 
             {err && (
-              <div className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm flex items-center gap-2">
+              <div className="px-3 py-2 bg-bad/10 border border-bad/30 rounded-lg text-bad text-sm flex items-center gap-2">
                 <AlertCircle size={16} /> {err}
               </div>
             )}
 
             <div className="flex justify-end gap-3 pt-1">
-              <button onClick={onClose} className="px-4 py-2 bg-dark-700 text-gray-200 rounded-lg hover:bg-dark-600 text-sm">
+              <button onClick={onClose} className="px-4 py-2 bg-panel-2 text-ink rounded-lg hover:bg-line text-sm">
                 取消
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={saving}
-                className="px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/80 disabled:opacity-50 text-sm font-medium flex items-center gap-1"
+                className="px-4 py-2 bg-iris text-ink rounded-lg hover:bg-iris/80 disabled:opacity-50 text-sm font-medium flex items-center gap-1"
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} 保存标注
               </button>

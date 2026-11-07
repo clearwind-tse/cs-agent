@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
+import { motion } from 'framer-motion'
 import { X, Loader2, RefreshCw, CheckCircle2, XCircle, Trash2, Inbox, Eye, EyeOff, ChevronLeft, ChevronRight, ShieldCheck, AlertTriangle, Tag, Filter, ClipboardCheck, Scale, Gauge } from 'lucide-react'
+import { StatCard, ChartFrame, StatusDonut, CategoryBars } from './ui'
 import { cn, formatDateTime } from '../utils'
 import { useToast } from '../contexts/ToastContext'
 import ConfirmDialog from './ConfirmDialog'
@@ -31,18 +33,19 @@ interface AdminViewProps {
 type AdminTab = 'cleaning' | 'qc' | 'calibration'
 
 const qcScoreColor = (s: number | null | undefined) =>
-  s == null ? 'text-gray-400' : s >= 80 ? 'text-green-400' : s >= 60 ? 'text-yellow-400' : 'text-red-400'
+  s == null ? 'text-ink-muted' : s >= 80 ? 'text-ok' : s >= 60 ? 'text-warn' : 'text-bad'
 
+/* 分类 chip 统一走低饱和语义色：避免 9 个高饱和色块把审核区压得过于吵闹 */
 const CATEGORY_OPTIONS = [
-  { id: 'savings_explain', name: '省钱讲解', color: 'bg-green-600' },
-  { id: 'rebate_query', name: '返利查询', color: 'bg-blue-600' },
-  { id: 'coupon_issue', name: '优惠券问题', color: 'bg-yellow-600' },
-  { id: 'order_problem', name: '订单问题', color: 'bg-purple-600' },
-  { id: 'complaint', name: '投诉处理', color: 'bg-indigo-600' },
-  { id: 'merchant', name: '到店霸王餐', color: 'bg-teal-600' },
-  { id: 'brand_promo', name: '品牌活动', color: 'bg-orange-600' },
-  { id: 'points_box', name: '积分盲盒', color: 'bg-pink-600' },
-  { id: 'onboarding', name: '新人引导', color: 'bg-cyan-600' },
+  { id: 'savings_explain', name: '省钱讲解', color: 'bg-ok/10 text-ok border-ok/25' },
+  { id: 'rebate_query', name: '返利查询', color: 'bg-iris/10 text-info border-iris/25' },
+  { id: 'coupon_issue', name: '优惠券问题', color: 'bg-warn/10 text-warn border-warn/25' },
+  { id: 'order_problem', name: '订单问题', color: 'bg-iris/10 text-info border-iris/25' },
+  { id: 'complaint', name: '投诉处理', color: 'bg-flare/10 text-bad border-flare/25' },
+  { id: 'merchant', name: '到店霸王餐', color: 'bg-ok/10 text-ok border-ok/25' },
+  { id: 'brand_promo', name: '品牌活动', color: 'bg-warn/10 text-warn border-warn/25' },
+  { id: 'points_box', name: '积分盲盒', color: 'bg-flare/10 text-bad border-flare/25' },
+  { id: 'onboarding', name: '新人引导', color: 'bg-iris/10 text-info border-iris/25' },
 ]
 
 export default function AdminView({ onClose }: AdminViewProps) {
@@ -306,28 +309,28 @@ export default function AdminView({ onClose }: AdminViewProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-dark-800 animate-fade-in h-full min-h-0">
+    <div className="flex-1 flex flex-col animate-fade-in h-full min-h-0">
       {/* Header */}
-      <header className="h-16 px-6 flex items-center justify-between border-b border-dark-600 bg-dark-800/80 backdrop-blur-sm flex-shrink-0">
+      <header className="h-16 px-6 flex items-center justify-between border-b border-line bg-panel/80 backdrop-blur-sm flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-            <Gauge size={20} className="text-white" />
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-iris to-flare flex items-center justify-center">
+            <Gauge size={20} className="text-ink" />
           </div>
           <div>
-            <h2 className="font-medium text-white">数据质检中心</h2>
-            <p className="text-xs text-gray-500">会话清洗 · 质检评分 · 校准对比</p>
+            <h2 className="font-medium text-ink">数据质检中心</h2>
+            <p className="text-xs text-ink-subtle">会话清洗 · 质检评分 · 校准对比</p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="p-2 rounded-lg hover:bg-dark-600 text-gray-400 hover:text-white transition-colors"
+          className="p-2 rounded-lg hover:bg-line text-ink-muted hover:text-ink transition-colors"
         >
           <X size={18} />
         </button>
       </header>
 
       {/* 顶层页签：清洗与质检同源合并，校准独立一页 */}
-      <div className="px-6 pt-3 flex gap-1 border-b border-dark-600 flex-shrink-0 overflow-x-auto">
+      <div className="px-6 pt-3 flex gap-1 border-b border-line flex-shrink-0 overflow-x-auto">
         <TabButton active={tab === 'cleaning'} onClick={() => setTab('cleaning')} icon={Filter} label="会话清洗与审核" />
         <TabButton active={tab === 'qc'} onClick={() => setTab('qc')} icon={ClipboardCheck} label="质检评分" />
         <TabButton active={tab === 'calibration'} onClick={() => setTab('calibration')} icon={Scale} label="校准对比" />
@@ -342,14 +345,14 @@ export default function AdminView({ onClose }: AdminViewProps) {
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
         <div className="max-w-7xl mx-auto w-full p-6">
           {/* Stats and Preprocess */}
-          <div className="bg-dark-700 p-6 rounded-lg shadow-lg mb-6">
+          <div className="chart-panel p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-200">数据概览</h3>
+              <h3 className="text-xl font-semibold text-ink">数据概览</h3>
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleCleanOldData}
                   disabled={preprocessing}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-bad hover:bg-bad text-ink rounded-lg text-sm font-medium transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                   title="清理2025年10月以前和群聊的旧数据"
                 >
                   {preprocessing ? (
@@ -362,7 +365,7 @@ export default function AdminView({ onClose }: AdminViewProps) {
                 <button
                   onClick={handlePreprocess}
                   disabled={preprocessing}
-                  className="px-4 py-2 bg-dark-500 hover:bg-dark-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-line-strong hover:bg-ink-subtle text-ink rounded-lg text-sm font-medium transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {preprocessing && !processAllProgress ? (
                     <Loader2 size={16} className="animate-spin mr-2" />
@@ -374,7 +377,7 @@ export default function AdminView({ onClose }: AdminViewProps) {
                 <button
                   onClick={handleProcessAll}
                   disabled={preprocessing}
-                  className="px-5 py-2 bg-accent-primary hover:bg-accent-secondary text-white rounded-lg text-base font-medium transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2 bg-iris hover:bg-flare text-ink rounded-lg text-base font-medium transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {processAllProgress ? (
                     <Loader2 size={18} className="animate-spin mr-2" />
@@ -389,13 +392,13 @@ export default function AdminView({ onClose }: AdminViewProps) {
             {/* 处理进度条 */}
             {processAllProgress && (
               <div className="mb-4">
-                <div className="flex items-center justify-between text-sm text-gray-400 mb-1">
+                <div className="flex items-center justify-between text-sm text-ink-muted mb-1">
                   <span>正在处理全部会话...</span>
                   <span>{processAllProgress.current} / {processAllProgress.total} 个会话</span>
                 </div>
-                <div className="w-full bg-dark-600 rounded-full h-2.5">
+                <div className="w-full bg-line rounded-full h-2.5">
                   <div
-                    className="bg-accent-primary h-2.5 rounded-full transition-all duration-300"
+                    className="bg-iris h-2.5 rounded-full transition-all duration-300"
                     style={{ width: `${processAllProgress.total > 0 ? (processAllProgress.current / processAllProgress.total) * 100 : 0}%` }}
                   />
                 </div>
@@ -403,12 +406,12 @@ export default function AdminView({ onClose }: AdminViewProps) {
             )}
 
             {error ? (
-              <div className="bg-red-900/30 border border-red-700 text-red-300 p-4 rounded-lg">
+              <div className="bg-bad/30 border border-bad text-bad p-4 rounded-lg">
                 <p className="text-sm font-medium mb-1">加载失败</p>
                 <p className="text-xs">{error}</p>
                 <button
                   onClick={loadStats}
-                  className="mt-2 px-3 py-1 bg-red-700 hover:bg-red-800 text-white rounded text-sm"
+                  className="mt-2 px-3 py-1 bg-bad hover:bg-bad text-ink rounded text-sm"
                 >
                   重试
                 </button>
@@ -417,68 +420,103 @@ export default function AdminView({ onClose }: AdminViewProps) {
               <>
                 {/* 会话处理进度（主要指标） */}
                 <div className="mb-4">
-                  <div className="flex items-center justify-between text-sm text-gray-400 mb-2">
+                  <div className="flex items-center justify-between text-sm text-ink-muted mb-2">
                     <span>会话处理进度</span>
                     <span>{stats.sessions.processed} / {stats.sessions.total} 个会话已处理</span>
                   </div>
-                  <div className="w-full bg-dark-600 rounded-full h-3">
+                  <div className="w-full bg-line rounded-full h-3">
                     <div
-                      className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
+                      className="bg-gradient-to-r from-iris to-mint h-3 rounded-full transition-all duration-500"
                       style={{ width: `${stats.sessions.total > 0 ? (stats.sessions.processed / stats.sessions.total) * 100 : 0}%` }}
                     />
                   </div>
                   {stats.sessions.unprocessed > 0 && (
-                    <p className="text-xs text-yellow-400 mt-1">
+                    <p className="text-xs text-warn mt-1">
                       还有 {stats.sessions.unprocessed} 个会话未处理，点击"一键处理全部"自动完成
                     </p>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <div className="bg-dark-600 p-4 rounded-lg">
-                    <p className="text-sm text-gray-400 mb-1">总会话</p>
-                    <p className="text-2xl font-bold text-white">{stats.sessions.total}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      原始消息 {stats.raw_chats.total.toLocaleString()} 条
-                    </p>
-                  </div>
-                  <div className="bg-dark-600 p-4 rounded-lg">
-                    <p className="text-sm text-gray-400 mb-1">未处理会话</p>
-                    <p className="text-2xl font-bold text-yellow-400">{stats.sessions.unprocessed}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      等待分块处理
-                    </p>
-                  </div>
-                  <div className="bg-dark-600 p-4 rounded-lg">
-                    <p className="text-sm text-gray-400 mb-1">暂存区对话</p>
-                    <p className="text-2xl font-bold text-white">{stats.staging_conversations.total}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      待审核: {stats.staging_conversations.pending}
-                    </p>
-                  </div>
-                  <div className="bg-dark-600 p-4 rounded-lg">
-                    <p className="text-sm text-gray-400 mb-1">已通过</p>
-                    <p className="text-2xl font-bold text-green-400">{stats.staging_conversations.approved}</p>
-                  </div>
-                  <div className="bg-dark-600 p-4 rounded-lg">
-                    <p className="text-sm text-gray-400 mb-1">已拒绝</p>
-                    <p className="text-2xl font-bold text-red-400">{stats.staging_conversations.rejected}</p>
-                  </div>
+                <motion.div
+                  initial="hidden"
+                  animate="show"
+                  transition={{ staggerChildren: 0.05 }}
+                  className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5"
+                >
+                  <StatCard
+                    label="总会话"
+                    value={stats.sessions.total}
+                    hint={`原始消息 ${stats.raw_chats.total.toLocaleString()} 条`}
+                    icon={<Gauge size={17} />}
+                    tone="iris"
+                  />
+                  <StatCard
+                    label="未处理会话"
+                    value={stats.sessions.unprocessed}
+                    hint="等待分块处理"
+                    icon={<AlertTriangle size={17} />}
+                    tone="flare"
+                  />
+                  <StatCard
+                    label="暂存区对话"
+                    value={stats.staging_conversations.total}
+                    hint={`待审核 ${stats.staging_conversations.pending}`}
+                    icon={<Inbox size={17} />}
+                    tone="iris"
+                  />
+                  <StatCard
+                    label="已通过"
+                    value={stats.staging_conversations.approved}
+                    hint="审核通过"
+                    icon={<CheckCircle2 size={17} />}
+                    tone="mint"
+                  />
+                  <StatCard
+                    label="已拒绝"
+                    value={stats.staging_conversations.rejected}
+                    hint="审核拒绝"
+                    icon={<XCircle size={17} />}
+                    tone="flare"
+                  />
+                </motion.div>
+
+                {/* 数据分布：全部来自当前 /api/admin/stats 快照，不编造时间序列 */}
+                <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                  <ChartFrame title="暂存区审核分布" subtitle="当前快照 · 单位：条">
+                    <StatusDonut
+                      data={[
+                        { name: '待审核', value: stats.staging_conversations.pending },
+                        { name: '已通过', value: stats.staging_conversations.approved },
+                        { name: '已拒绝', value: stats.staging_conversations.rejected },
+                      ]}
+                      centerLabel="暂存对话"
+                    />
+                  </ChartFrame>
+                  <ChartFrame title="原始消息状态构成" subtitle="当前快照 · 单位：条">
+                    <CategoryBars
+                      data={[
+                        { name: '待处理', value: stats.raw_chats.pending },
+                        { name: '已通过', value: stats.raw_chats.approved },
+                        { name: '已拒绝', value: stats.raw_chats.rejected },
+                      ]}
+                      unit=" 条"
+                    />
+                  </ChartFrame>
                 </div>
               </>
             ) : (
-              <p className="text-gray-500">加载统计中...</p>
+              <p className="text-ink-subtle">加载统计中...</p>
             )}
           </div>
 
           {/* Filters and Batch Actions */}
-          <div className="bg-dark-700 p-4 rounded-lg shadow-lg mb-6 flex flex-wrap items-center gap-4">
+          <div className="chart-panel p-4 mb-6 flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
-              <label className="text-gray-400 text-sm">状态:</label>
+              <label className="text-ink-muted text-sm">状态:</label>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value as any)}
-                className="bg-dark-600 border border-dark-500 text-white text-sm rounded-lg focus:ring-accent-primary focus:border-accent-primary p-2"
+                className="bg-line border border-line-strong text-ink text-sm rounded-lg focus:ring-iris focus:border-iris p-2"
               >
                 <option value="pending">待审核</option>
                 <option value="approved">已通过</option>
@@ -489,22 +527,22 @@ export default function AdminView({ onClose }: AdminViewProps) {
 
             {selectedConversations.size > 0 && (
               <div className="flex items-center gap-2 ml-auto">
-                <span className="text-gray-400 text-sm">{selectedConversations.size} 项已选择:</span>
+                <span className="text-ink-muted text-sm">{selectedConversations.size} 项已选择:</span>
                 <button
                   onClick={() => handleBatchAction('approve')}
-                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm flex items-center gap-1"
+                  className="px-3 py-1.5 bg-ok hover:bg-ok text-ink rounded-lg text-sm flex items-center gap-1"
                 >
                   <CheckCircle2 size={16} /> 批量通过
                 </button>
                 <button
                   onClick={() => handleBatchAction('reject')}
-                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm flex items-center gap-1"
+                  className="px-3 py-1.5 bg-bad hover:bg-bad text-ink rounded-lg text-sm flex items-center gap-1"
                 >
                   <XCircle size={16} /> 批量拒绝
                 </button>
                 <button
                   onClick={() => handleBatchAction('delete')}
-                  className="px-3 py-1.5 bg-red-800 hover:bg-red-900 text-white rounded-lg text-sm flex items-center gap-1"
+                  className="px-3 py-1.5 bg-bad hover:bg-bad text-ink rounded-lg text-sm flex items-center gap-1"
                 >
                   <Trash2 size={16} /> 批量删除
                 </button>
@@ -514,7 +552,7 @@ export default function AdminView({ onClose }: AdminViewProps) {
 
           {/* Conversations List */}
           {conversations.length === 0 && !loading ? (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-ink-subtle">
               <Inbox size={32} className="mx-auto mb-2 opacity-50" />
               <p className="text-sm">暂无暂存区对话。请先点击 "处理下一批会话"。</p>
             </div>
@@ -540,21 +578,21 @@ export default function AdminView({ onClose }: AdminViewProps) {
 
               {/* 分页控件 */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-4 py-4 border-t border-dark-600">
+                <div className="flex items-center justify-center gap-4 py-4 border-t border-line">
                   <button
                     onClick={() => loadConversations(currentPage - 1)}
                     disabled={currentPage <= 1 || loading}
-                    className="px-4 py-2 bg-dark-600 hover:bg-dark-500 text-white rounded-lg text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-line hover:bg-line-strong text-ink rounded-lg text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft size={16} /> 上一页
                   </button>
-                  <span className="text-gray-400 text-sm">
+                  <span className="text-ink-muted text-sm">
                     第 {currentPage} / {totalPages} 页 (共 {totalItems} 条)
                   </span>
                   <button
                     onClick={() => loadConversations(currentPage + 1)}
                     disabled={currentPage >= totalPages || loading}
-                    className="px-4 py-2 bg-dark-600 hover:bg-dark-500 text-white rounded-lg text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-line hover:bg-line-strong text-ink rounded-lg text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     下一页 <ChevronRight size={16} />
                   </button>
@@ -563,8 +601,8 @@ export default function AdminView({ onClose }: AdminViewProps) {
 
               {loading && (
                 <div className="p-4 text-center">
-                  <Loader2 size={24} className="animate-spin text-accent-primary mx-auto" />
-                  <p className="text-gray-500 text-sm mt-2">加载中...</p>
+                  <Loader2 size={24} className="animate-spin text-iris mx-auto" />
+                  <p className="text-ink-subtle text-sm mt-2">加载中...</p>
                 </div>
               )}
             </div>
@@ -629,29 +667,29 @@ function StagingItem({
 }: StagingItemProps) {
   const getCategoryColor = (category?: string) => {
     const option = CATEGORY_OPTIONS.find(opt => opt.id === category)
-    return option ? option.color : 'bg-gray-600'
+    return option ? option.color : 'bg-panel-2'
   }
 
   return (
     <div className={cn(
-      "bg-dark-700 p-5 rounded-lg shadow-md border",
-      isSelected ? "border-accent-primary" : "border-dark-600",
-      conversation.status === 'approved' && 'border-green-600/50',
-      conversation.status === 'rejected' && 'border-red-600/50',
+      "bg-panel-2 p-5 rounded-lg shadow-md border",
+      isSelected ? "border-iris" : "border-line",
+      conversation.status === 'approved' && 'border-ok/50',
+      conversation.status === 'rejected' && 'border-bad/50',
     )}>
       <div className="flex items-start mb-4">
         <input
           type="checkbox"
           checked={isSelected}
           onChange={onToggleSelect}
-          className="h-5 w-5 text-accent-primary rounded border-gray-500 focus:ring-accent-primary bg-dark-500 mr-3 mt-1"
+          className="h-5 w-5 text-iris rounded border-line focus:ring-iris bg-line-strong mr-3 mt-1"
         />
         <div className="flex-1">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-gray-400">会话: {maskSessionId(conversation.session_id)}</span>
+              <span className="text-sm text-ink-muted">会话: {maskSessionId(conversation.session_id)}</span>
               {conversation.auto_quality_score !== null && (
-                <span className="px-2 py-0.5 text-xs rounded-full bg-blue-600/30 text-blue-300">
+                <span className="px-2 py-0.5 text-xs rounded-full bg-iris/30 text-info">
                   AI 评分: {conversation.auto_quality_score?.toFixed(1)}
                 </span>
               )}
@@ -660,11 +698,11 @@ function StagingItem({
                   {CATEGORY_OPTIONS.find(c => c.id === conversation.auto_category)?.name || conversation.auto_category}
                 </span>
               )}
-              {conversation.status === 'pending' && <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-600/30 text-yellow-300">待审核</span>}
-              {conversation.status === 'approved' && <span className="px-2 py-0.5 text-xs rounded-full bg-green-600/30 text-green-300">已通过</span>}
-              {conversation.status === 'rejected' && <span className="px-2 py-0.5 text-xs rounded-full bg-red-600/30 text-red-300">已拒绝</span>}
+              {conversation.status === 'pending' && <span className="px-2 py-0.5 text-xs rounded-full bg-warn/30 text-warn">待审核</span>}
+              {conversation.status === 'approved' && <span className="px-2 py-0.5 text-xs rounded-full bg-ok/30 text-ok">已通过</span>}
+              {conversation.status === 'rejected' && <span className="px-2 py-0.5 text-xs rounded-full bg-bad/30 text-bad">已拒绝</span>}
             </div>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-ink-subtle">
               {conversation.start_time
                 ? formatDateTime(conversation.start_time)  // 时间戳是秒级
                 : conversation.created_at
@@ -684,29 +722,29 @@ function StagingItem({
               <div className="flex items-center gap-3">
                 <button
                   onClick={onToggleOriginal}
-                  className="text-xs text-gray-400 hover:text-gray-300 flex items-center gap-1"
+                  className="text-xs text-ink-muted hover:text-ink flex items-center gap-1"
                 >
                   {showOriginal ? <EyeOff size={14} /> : <Eye size={14} />}
                   {showOriginal ? '显示清洗后' : '显示原始'}
                 </button>
                 {conversation.start_time && conversation.end_time && (
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-ink-subtle">
                     时间: {formatDateTime(conversation.start_time)} - {formatDateTime(conversation.end_time)}
                   </span>
                 )}
               </div>
             </div>
-            <p className="text-gray-200 whitespace-pre-wrap text-sm bg-dark-600 p-3 rounded">
+            <p className="text-ink whitespace-pre-wrap text-sm bg-line p-3 rounded">
               {showOriginal ? conversation.original_text : (conversation.cleaned_text || conversation.original_text)}
             </p>
           </div>
 
           {/* Q&A 预览 */}
           {(conversation.auto_question || conversation.human_question) && (
-            <div className="mb-3 bg-dark-600 p-3 rounded text-sm">
-              <p className="text-gray-400 mb-1">Q: {conversation.human_question || conversation.auto_question}</p>
+            <div className="mb-3 bg-line p-3 rounded text-sm">
+              <p className="text-ink-muted mb-1">Q: {conversation.human_question || conversation.auto_question}</p>
               {(conversation.auto_answer || conversation.human_answer) && (
-                <p className="text-gray-300">A: {conversation.human_answer || conversation.auto_answer}</p>
+                <p className="text-ink">A: {conversation.human_answer || conversation.auto_answer}</p>
               )}
             </div>
           )}
@@ -722,7 +760,7 @@ function StagingItem({
       <div className="flex flex-wrap gap-2 mt-4 justify-end">
         <button
           onClick={onViewDetail}
-          className="px-4 py-2 bg-dark-600 hover:bg-dark-500 text-gray-300 rounded-lg text-sm flex items-center gap-1"
+          className="px-4 py-2 bg-line hover:bg-line-strong text-ink rounded-lg text-sm flex items-center gap-1"
         >
           <Eye size={16} /> {isExpanded ? '收起' : '查看详情'}
         </button>
@@ -731,9 +769,9 @@ function StagingItem({
             key={cat.id}
             onClick={() => onApprove(conversation.id, cat.id)}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-xs text-white",
+              "px-3 py-1.5 rounded-lg text-xs transition-all hover:brightness-125",
               cat.color,
-              conversation.human_category === cat.id && conversation.status === 'approved' ? 'ring-2 ring-offset-2 ring-offset-dark-700 ring-white' : ''
+              conversation.human_category === cat.id && conversation.status === 'approved' ? 'ring-2 ring-offset-2 ring-offset-panel-2 ring-ink' : ''
             )}
           >
             {cat.name}
@@ -741,14 +779,14 @@ function StagingItem({
         ))}
         <button
           onClick={onMarkCalibration}
-          className="px-4 py-2 bg-dark-600 hover:bg-dark-500 text-gray-200 rounded-lg text-sm flex items-center gap-1"
+          className="px-4 py-2 bg-line hover:bg-line-strong text-ink rounded-lg text-sm flex items-center gap-1"
           title="把该会话标为质检校准的标注数据"
         >
           <Tag size={16} /> 标记为标注数据
         </button>
         <button
           onClick={() => onReject(conversation.id)}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm flex items-center gap-1"
+          className="px-4 py-2 bg-bad hover:bg-bad text-ink rounded-lg text-sm flex items-center gap-1"
         >
           <XCircle size={16} /> 拒绝
         </button>
@@ -765,26 +803,26 @@ function QcBrief({ qc, dimNames, threshold }: {
 }) {
   const scores = qc.scores || {}
   return (
-    <div className="mb-3 rounded-lg border border-dark-600 bg-dark-900/50 p-3">
+    <div className="mb-3 rounded-lg border border-line bg-canvas/50 p-3">
       <div className="flex items-center gap-2 mb-2 flex-wrap">
-        <ShieldCheck size={14} className="text-accent-primary" />
-        <span className="text-xs text-gray-400">AI 质检</span>
+        <ShieldCheck size={14} className="text-iris" />
+        <span className="text-xs text-ink-muted">AI 质检</span>
         <span className={cn('text-sm font-bold', qcScoreColor(qc.overall_score))}>
           {qc.scored ? (qc.overall_score ?? '-') : '未评分'}
         </span>
         {qc.scored && qc.overall_score != null && (
           qc.overall_score >= threshold
-            ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-400">及格</span>
-            : <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400">不及格</span>
+            ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-ok/10 text-ok">及格</span>
+            : <span className="text-[10px] px-1.5 py-0.5 rounded bg-bad/10 text-bad">不及格</span>
         )}
-        {qc.agent_name && <span className="text-xs text-gray-500">客服：{qc.agent_name}</span>}
-        {qc.config_name && <span className="text-xs text-gray-600">{qc.config_name}</span>}
+        {qc.agent_name && <span className="text-xs text-ink-subtle">客服：{qc.agent_name}</span>}
+        {qc.config_name && <span className="text-xs text-ink-subtle">{qc.config_name}</span>}
       </div>
 
       {Object.keys(scores).length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-1">
           {Object.entries(scores).map(([k, v]) => (
-            <span key={k} className="text-[10px] text-gray-400 bg-dark-700 rounded px-1.5 py-0.5">
+            <span key={k} className="text-[10px] text-ink-muted bg-panel-2 rounded px-1.5 py-0.5">
               {dimNames[k] || k}: <span className={qcScoreColor(v)}>{v}</span>
             </span>
           ))}
@@ -794,7 +832,7 @@ function QcBrief({ qc, dimNames, threshold }: {
       {qc.violations && qc.violations.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1">
           {qc.violations.map((v, i) => (
-            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-300 border border-red-500/20 flex items-center gap-1">
+            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-bad/10 text-bad border border-bad/20 flex items-center gap-1">
               <AlertTriangle size={10} /> {v.type}
             </span>
           ))}
@@ -823,26 +861,26 @@ function StagingDetail({ stagingId }: { stagingId: number }) {
   }
 
   if (!detail) {
-    return <div className="p-4 text-gray-500 text-sm">加载失败</div>
+    return <div className="p-4 text-ink-subtle text-sm">加载失败</div>
   }
 
   return (
-    <div className="mt-4 p-4 bg-dark-600 rounded-lg">
-      <h4 className="text-sm font-medium text-gray-300 mb-3">原始消息对照</h4>
+    <div className="mt-4 p-4 bg-line rounded-lg">
+      <h4 className="text-sm font-medium text-ink mb-3">原始消息对照</h4>
       <div className="space-y-2 max-h-60 overflow-y-auto">
         {detail.original_messages?.map((msg: any, idx: number) => (
-          <div key={idx} className="text-xs bg-dark-700 p-2 rounded">
+          <div key={idx} className="text-xs bg-panel-2 p-2 rounded">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-gray-400">{msg.sender_name || (msg.is_sender ? '我' : '对方')}:</span>
+              <span className="text-ink-muted">{msg.sender_name || (msg.is_sender ? '我' : '对方')}:</span>
               {msg.timestamp && (
-                <span className="text-gray-500">
+                <span className="text-ink-subtle">
                   {formatDateTime(msg.timestamp)}
                 </span>
               )}
             </div>
-            <span className="text-gray-300">{msg.content}</span>
+            <span className="text-ink">{msg.content}</span>
             {msg.clean_content && msg.clean_content !== msg.content && (
-              <div className="text-gray-500 mt-1">清洗后: {msg.clean_content}</div>
+              <div className="text-ink-subtle mt-1">清洗后: {msg.clean_content}</div>
             )}
           </div>
         ))}

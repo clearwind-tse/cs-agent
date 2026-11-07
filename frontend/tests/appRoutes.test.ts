@@ -10,6 +10,7 @@ import {
 
 test('getViewModeFromPath maps top-level paths to views', () => {
   assert.equal(getViewModeFromPath('/search'), 'search')
+  assert.equal(getViewModeFromPath('/overview'), 'overview')
   assert.equal(getViewModeFromPath('/unknown-path'), 'chat')
   assert.equal(getViewModeFromPath('/chat/wxid_123'), 'chat')
   assert.equal(getViewModeFromPath('/'), 'chat')
@@ -24,6 +25,7 @@ test('buildChatPath encodes session id and message id', () => {
 test('buildViewPath returns expected non-chat paths', () => {
   assert.equal(buildViewPath('admin'), '/admin')
   assert.equal(buildViewPath('quiz'), '/quiz')
+  assert.equal(buildViewPath('overview'), '/overview')
 })
 
 test('getChatRouteState parses session id and message id from location', () => {

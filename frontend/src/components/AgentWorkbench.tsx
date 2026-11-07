@@ -46,22 +46,22 @@ const PANE_META: Record<Exclude<AgentPane, 'chat'>, {
     title: '工单',
     desc: 'Agent 自动建单 · 人工审批挂起 · SLA 计时',
     icon: LifeBuoy,
-    iconCls: 'text-amber-300',
-    boxCls: 'bg-amber-500/15',
+    iconCls: 'text-warn',
+    boxCls: 'bg-warn/15',
   },
   skill: {
     title: 'Skill & MCP',
     desc: '能力包与外部业务系统接入',
     icon: Tag,
-    iconCls: 'text-cyan-300',
-    boxCls: 'bg-cyan-500/15',
+    iconCls: 'text-info',
+    boxCls: 'bg-iris/15',
   },
   config: {
     title: 'Agent 配置',
     desc: '子 Agent 注册 · 意图路由 · 提示词',
     icon: Bot,
-    iconCls: 'text-violet-300',
-    boxCls: 'bg-violet-500/15',
+    iconCls: 'text-iris',
+    boxCls: 'bg-iris/15',
   },
 }
 
@@ -129,25 +129,25 @@ export default function AgentWorkbench({
         onCreateSession={onCreateSession}
       />
 
-      <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-dark-800">
-        <header className="h-14 px-5 flex items-center justify-between border-b border-dark-600 flex-shrink-0">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-panel">
+        <header className="h-14 px-5 flex items-center justify-between border-b border-line flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', meta.boxCls)}>
               <Icon size={16} className={meta.iconCls} />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm font-medium text-white leading-tight">{meta.title}</h2>
-              <p className="text-[11px] text-gray-500 truncate">{meta.desc}</p>
+              <h2 className="text-sm font-medium text-ink leading-tight">{meta.title}</h2>
+              <p className="text-[11px] text-ink-subtle truncate">{meta.desc}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {pane === 'ticket' && ticketSessionId && (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-[11px] text-amber-200">
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warn/15 border border-warn/30 text-[11px] text-warn">
                 <MessageSquare size={11} />
                 仅看会话 {ticketSessionId}
                 <button
                   onClick={() => setTicketSessionId(null)}
-                  className="text-amber-300/70 hover:text-amber-100"
+                  className="text-warn/70 hover:text-warn"
                   title="清除会话过滤"
                 >
                   <X size={11} />
@@ -156,7 +156,7 @@ export default function AgentWorkbench({
             )}
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-dark-600 text-gray-400 hover:text-white transition-colors"
+              className="p-2 rounded-lg hover:bg-line text-ink-muted hover:text-ink transition-colors"
               title="返回聊天"
             >
               <X size={18} />

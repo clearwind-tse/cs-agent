@@ -154,11 +154,11 @@ export default function AgentSessionSidebar({
   }
 
   return (
-    <aside className="w-72 flex-shrink-0 bg-dark-900 border-r border-dark-600 flex flex-col overflow-hidden relative">
+    <aside className="w-72 flex-shrink-0 bg-canvas border-r border-line flex flex-col overflow-hidden relative">
       {/* 客服工作台入口：会话 / 工单 / Skill & MCP / Agent 配置 */}
       {pane && onSelectPane && (
-        <div className="p-2 border-b border-dark-600 flex-shrink-0">
-          <p className="px-2 pb-1 text-[10px] font-medium tracking-widest text-gray-600 uppercase">
+        <div className="p-2 border-b border-line flex-shrink-0">
+          <p className="px-2 pb-1 text-[10px] font-medium tracking-widest text-ink-subtle uppercase">
             客服工作台
           </p>
           <div className="space-y-0.5">
@@ -172,14 +172,14 @@ export default function AgentSessionSidebar({
                   className={cn(
                     'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs border transition-colors',
                     active
-                      ? 'bg-cyan-600/15 text-cyan-300 border-cyan-500/25'
-                      : 'text-gray-400 hover:bg-dark-700/60 hover:text-gray-200 border-transparent',
+                      ? 'bg-iris/15 text-info border-iris/25'
+                      : 'text-ink-muted hover:bg-panel-2/60 hover:text-ink border-transparent',
                   )}
                 >
                   <Icon size={14} className="flex-shrink-0" />
                   <span className="flex-1 text-left truncate">{item.label}</span>
                   {item.key === 'ticket' && openTickets != null && openTickets > 0 && (
-                    <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-warn/20 text-warn border border-warn/30">
                       {openTickets}
                     </span>
                   )}
@@ -192,11 +192,11 @@ export default function AgentSessionSidebar({
       )}
 
       {/* 头部 */}
-      <div className="p-3 border-b border-dark-600 flex items-center justify-between flex-shrink-0">
+      <div className="p-3 border-b border-line flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <MessageSquare size={16} className="text-cyan-400" />
-          <span className="text-sm font-medium text-gray-200">会话列表</span>
-          <span className="text-xs text-gray-500 bg-dark-700 px-1.5 py-0.5 rounded-full">
+          <MessageSquare size={16} className="text-info" />
+          <span className="text-sm font-medium text-ink">会话列表</span>
+          <span className="text-xs text-ink-subtle bg-panel-2 px-1.5 py-0.5 rounded-full">
             {sessions.length}
           </span>
         </div>
@@ -204,7 +204,7 @@ export default function AgentSessionSidebar({
           <button
             onClick={loadSessions}
             title="刷新"
-            className="p-1.5 rounded hover:bg-dark-700 text-gray-400 hover:text-gray-200 transition-colors"
+            className="p-1.5 rounded hover:bg-panel-2 text-ink-muted hover:text-ink transition-colors"
           >
             {loading ? (
               <Loader2 size={14} className="animate-spin" />
@@ -215,7 +215,7 @@ export default function AgentSessionSidebar({
           <button
             onClick={() => setShowNewDialog(true)}
             title="新建会话"
-            className="p-1.5 rounded hover:bg-cyan-600/20 text-gray-400 hover:text-cyan-300 transition-colors"
+            className="p-1.5 rounded hover:bg-iris/20 text-ink-muted hover:text-info transition-colors"
           >
             <Plus size={14} />
           </button>
@@ -224,10 +224,10 @@ export default function AgentSessionSidebar({
 
       {/* 错误提示 */}
       {error && (
-        <div className="mx-3 mt-3 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-300 flex items-start gap-2">
+        <div className="mx-3 mt-3 px-3 py-2 bg-bad/10 border border-bad/30 rounded-lg text-xs text-bad flex items-start gap-2">
           <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
           <span className="flex-1">{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200">
+          <button onClick={() => setError(null)} className="text-bad hover:text-bad">
             <X size={12} />
           </button>
         </div>
@@ -236,10 +236,10 @@ export default function AgentSessionSidebar({
       {/* 会话列表 */}
       <div className="flex-1 overflow-y-auto py-2">
         {sessions.length === 0 && !loading ? (
-          <div className="px-4 py-12 text-center text-gray-500">
+          <div className="px-4 py-12 text-center text-ink-subtle">
             <MessageSquare size={32} className="mx-auto mb-3 opacity-30" />
             <p className="text-sm mb-1">暂无 Agent 会话</p>
-            <p className="text-xs text-gray-600">点击右上角 + 创建新会话</p>
+            <p className="text-xs text-ink-subtle">点击右上角 + 创建新会话</p>
           </div>
         ) : (
           sessions.map((session) => (
@@ -258,19 +258,19 @@ export default function AgentSessionSidebar({
 
       {/* 新建会话弹窗 */}
       {showNewDialog && (
-        <div className="absolute inset-0 z-50 bg-dark-900/95 backdrop-blur flex flex-col animate-fade-in">
-          <div className="p-4 border-b border-dark-600 flex items-center justify-between">
-            <h3 className="text-sm font-medium text-white">新建 Agent 会话</h3>
-            <button onClick={() => setShowNewDialog(false)} className="text-gray-400 hover:text-white">
+        <div className="absolute inset-0 z-50 bg-canvas/95 backdrop-blur flex flex-col animate-fade-in">
+          <div className="p-4 border-b border-line flex items-center justify-between">
+            <h3 className="text-sm font-medium text-ink">新建 Agent 会话</h3>
+            <button onClick={() => setShowNewDialog(false)} className="text-ink-muted hover:text-ink">
               <X size={18} />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* session_id */}
             <div>
-              <label className="block text-xs text-gray-400 mb-1.5 flex items-center gap-1">
+              <label className="block text-xs text-ink-muted mb-1.5 flex items-center gap-1">
                 <Hash size={12} />
-                会话 ID <span className="text-red-400">*</span>
+                会话 ID <span className="text-bad">*</span>
               </label>
               <div className="flex gap-2">
                 <input
@@ -279,7 +279,7 @@ export default function AgentSessionSidebar({
                   onChange={(e) => setForm(f => ({ ...f, session_id: e.target.value }))}
                   disabled={autoSessionId}
                   placeholder="例如：agent-12345"
-                  className="flex-1 min-w-0 px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 disabled:opacity-50"
+                  className="flex-1 min-w-0 px-3 py-2 bg-panel-2 border border-line-strong rounded-lg text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-iris/50 disabled:opacity-50"
                 />
                 <button
                   onClick={() => {
@@ -291,8 +291,8 @@ export default function AgentSessionSidebar({
                   className={cn(
                     'px-2.5 py-2 rounded-lg text-xs border transition-colors',
                     autoSessionId
-                      ? 'bg-cyan-600/20 border-cyan-500/40 text-cyan-300'
-                      : 'bg-dark-700 border-dark-500 text-gray-400 hover:text-white',
+                      ? 'bg-iris/20 border-iris/40 text-info'
+                      : 'bg-panel-2 border-line-strong text-ink-muted hover:text-ink',
                   )}
                   title={autoSessionId ? '使用手动输入' : '自动生成 session_id'}
                 >
@@ -302,7 +302,7 @@ export default function AgentSessionSidebar({
             </div>
             {/* user_id */}
             <div>
-              <label className="block text-xs text-gray-400 mb-1.5 flex items-center gap-1">
+              <label className="block text-xs text-ink-muted mb-1.5 flex items-center gap-1">
                 <User size={12} />
                 用户 ID
               </label>
@@ -311,12 +311,12 @@ export default function AgentSessionSidebar({
                 value={form.user_id}
                 onChange={(e) => setForm(f => ({ ...f, user_id: e.target.value }))}
                 placeholder="选填，例如：user-001"
-                className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50"
+                className="w-full px-3 py-2 bg-panel-2 border border-line-strong rounded-lg text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-iris/50"
               />
             </div>
             {/* display_name */}
             <div>
-              <label className="block text-xs text-gray-400 mb-1.5 flex items-center gap-1">
+              <label className="block text-xs text-ink-muted mb-1.5 flex items-center gap-1">
                 <User size={12} />
                 显示名称
               </label>
@@ -325,22 +325,22 @@ export default function AgentSessionSidebar({
                 value={form.display_name}
                 onChange={(e) => setForm(f => ({ ...f, display_name: e.target.value }))}
                 placeholder="选填，例如：张三"
-                className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50"
+                className="w-full px-3 py-2 bg-panel-2 border border-line-strong rounded-lg text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-iris/50"
               />
-              <p className="mt-1 text-[11px] text-gray-600">未填写则自动生成：Agent · {form.user_id || 'anonymous'}</p>
+              <p className="mt-1 text-[11px] text-ink-subtle">未填写则自动生成：Agent · {form.user_id || 'anonymous'}</p>
             </div>
           </div>
-          <div className="p-4 border-t border-dark-600 flex justify-end gap-2 flex-shrink-0">
+          <div className="p-4 border-t border-line flex justify-end gap-2 flex-shrink-0">
             <button
               onClick={() => setShowNewDialog(false)}
-              className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors"
+              className="px-3 py-1.5 text-sm text-ink-muted hover:text-ink transition-colors"
             >
               取消
             </button>
             <button
               onClick={handleCreate}
               disabled={creating || (!autoSessionId && !form.session_id.trim())}
-              className="px-4 py-1.5 text-sm bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-1.5"
+              className="px-4 py-1.5 text-sm bg-iris hover:bg-iris disabled:opacity-50 disabled:cursor-not-allowed text-ink rounded-lg transition-colors flex items-center gap-1.5"
             >
               {creating && <Loader2 size={14} className="animate-spin" />}
               创建会话
@@ -373,18 +373,18 @@ function SessionItem({
       className={cn(
         'mx-2 my-0.5 px-3 py-2.5 rounded-lg cursor-pointer transition-all group',
         isSelected
-          ? 'bg-dark-600 border border-cyan-500/30'
-          : 'hover:bg-dark-700/60 border border-transparent',
+          ? 'bg-line border border-iris/30'
+          : 'hover:bg-panel-2/60 border border-transparent',
       )}
       onClick={onClick}
     >
       <div className="flex items-start gap-2.5">
         {/* 头像 */}
         <div className={cn(
-          'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0',
+          'w-8 h-8 rounded-full flex items-center justify-center text-ink text-xs font-medium flex-shrink-0',
           isSelected
-            ? 'bg-gradient-to-br from-cyan-500 to-blue-600'
-            : 'bg-gradient-to-br from-gray-500 to-gray-600',
+            ? 'bg-gradient-to-br from-iris to-iris'
+            : 'bg-gradient-to-br from-panel-2 to-panel-2',
         )}>
           {name.charAt(0).toUpperCase()}
         </div>
@@ -393,26 +393,26 @@ function SessionItem({
           <div className="flex items-center gap-1.5">
             <span className={cn(
               'text-sm font-medium truncate',
-              isSelected ? 'text-white' : 'text-gray-200',
+              isSelected ? 'text-ink' : 'text-ink',
             )}>
               {truncate(name, 18)}
             </span>
           </div>
-          <p className="text-xs text-gray-500 truncate mt-0.5">
+          <p className="text-xs text-ink-subtle truncate mt-0.5">
             {truncate(session.last_message || '暂无消息', 28)}
           </p>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-[11px] text-gray-600 flex items-center gap-0.5">
+            <span className="text-[11px] text-ink-subtle flex items-center gap-0.5">
               <Hash size={10} />
               {truncate(session.session_id, 12)}
             </span>
             {session.user_id && (
-              <span className="text-[11px] text-gray-600 flex items-center gap-0.5">
+              <span className="text-[11px] text-ink-subtle flex items-center gap-0.5">
                 <User size={10} />
                 {session.user_id}
               </span>
             )}
-            <span className="text-[11px] text-gray-600 ml-auto flex items-center gap-0.5">
+            <span className="text-[11px] text-ink-subtle ml-auto flex items-center gap-0.5">
               <Clock size={10} />
               {session.updated_at ? formatTime(Math.floor(new Date(session.updated_at).getTime() / 1000)) : '未知'}
             </span>
@@ -422,7 +422,7 @@ function SessionItem({
         {onOpenTickets && (
           <button
             onClick={(e) => { e.stopPropagation(); onOpenTickets() }}
-            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-amber-500/20 text-gray-500 hover:text-amber-300 transition-all flex-shrink-0"
+            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-warn/20 text-ink-subtle hover:text-warn transition-all flex-shrink-0"
             title="查看本会话工单"
           >
             <LifeBuoy size={13} />
@@ -431,7 +431,7 @@ function SessionItem({
         <button
           onClick={(e) => { e.stopPropagation(); onDelete() }}
           disabled={deleting}
-          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/20 text-gray-500 hover:text-red-300 transition-all flex-shrink-0"
+          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-bad/20 text-ink-subtle hover:text-bad transition-all flex-shrink-0"
           title="删除会话"
         >
           {deleting ? (
@@ -443,7 +443,7 @@ function SessionItem({
       </div>
       {session.message_count > 0 && (
         <div className="mt-1.5 flex items-center gap-1">
-          <span className="text-[11px] text-gray-600 bg-dark-800 px-1.5 py-0.5 rounded">
+          <span className="text-[11px] text-ink-subtle bg-panel px-1.5 py-0.5 rounded">
             {session.message_count} 轮对话
           </span>
         </div>

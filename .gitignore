@@ -214,3 +214,5 @@ Msg
 .claude
 # vite 开发时产生的临时配置快照
 vite.config.ts.timestamp-*
+# 视觉回归截图（本地生成，不入库）
+frontend/.visual-regression/

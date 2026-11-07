@@ -60,24 +60,24 @@ export default function Sidebar({ selectedSession, onSelectSession }: SidebarPro
   }
 
   return (
-    <aside className="w-full h-full bg-dark-900 border-r border-dark-600 flex flex-col overflow-hidden">
+    <aside className="w-full h-full bg-canvas/75 border-r border-line flex flex-col overflow-hidden backdrop-blur-xl relative z-10">
       {/* 顶部标题和搜索 */}
-      <div className="p-4 border-b border-dark-600">
+      <div className="p-4 border-b border-line">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-lg font-semibold bg-gradient-to-r from-accent-primary to-accent-secondary bg-clip-text text-transparent">
+          <h1 className="text-lg font-semibold bg-gradient-to-r from-iris to-flare bg-clip-text text-transparent">
             会话列表
           </h1>
         </div>
 
         {/* 搜索框 */}
         <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
           <input
             type="text"
             placeholder="搜索会话..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-accent-primary/50 transition-colors"
+            className="w-full pl-9 pr-4 py-2 bg-panel-2 border border-line-strong rounded-lg text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-iris/50 transition-colors"
           />
         </div>
       </div>
@@ -88,7 +88,7 @@ export default function Sidebar({ selectedSession, onSelectSession }: SidebarPro
         onScroll={handleScroll}
       >
         {sessions.length === 0 && !loading ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-ink-subtle">
             <MessageCircle size={32} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm">暂无会话</p>
           </div>
@@ -105,7 +105,7 @@ export default function Sidebar({ selectedSession, onSelectSession }: SidebarPro
             ))}
             {loading && (
               <div className="p-4 text-center">
-                <div className="inline-block w-5 h-5 border-2 border-accent-primary/30 border-t-accent-primary rounded-full animate-spin" />
+                <div className="inline-block w-5 h-5 border-2 border-iris/30 border-t-iris rounded-full animate-spin" />
               </div>
             )}
           </div>
@@ -113,7 +113,7 @@ export default function Sidebar({ selectedSession, onSelectSession }: SidebarPro
       </div>
 
       {/* 底部统计 */}
-      <div className="p-3 border-t border-dark-600 text-xs text-gray-500 text-center">
+      <div className="p-3 border-t border-line text-xs text-ink-subtle text-center">
         共 {sessions.length} 个会话
       </div>
     </aside>
@@ -138,13 +138,13 @@ function SessionItem({ session, isSelected, onClick, style }: SessionItemProps) 
       className={cn(
         'w-full px-3 py-3 flex items-center gap-3 transition-all animate-fade-in',
         isSelected
-          ? 'bg-dark-600'
-          : 'hover:bg-dark-700/50'
+          ? 'bg-line'
+          : 'hover:bg-panel-2/50'
       )}
     >
       {/* 头像 */}
       <div className={cn(
-        'w-10 h-10 rounded-full flex items-center justify-center text-white font-medium bg-gradient-to-br flex-shrink-0',
+        'w-10 h-10 rounded-full flex items-center justify-center text-ink font-medium bg-gradient-to-br flex-shrink-0',
         avatarColor
       )}>
         {getInitials(displayName)}
@@ -155,21 +155,21 @@ function SessionItem({ session, isSelected, onClick, style }: SessionItemProps) 
         <div className="flex items-center justify-between">
           <span className={cn(
             'font-medium truncate',
-            isSelected ? 'text-white' : 'text-gray-200'
+            isSelected ? 'text-ink' : 'text-ink'
           )}>
             {truncate(displayName, 15)}
           </span>
           {session.last_time && (
-            <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+            <span className="text-xs text-ink-subtle flex-shrink-0 ml-2">
               {formatTime(session.last_time)}
             </span>
           )}
         </div>
         <div className="flex items-center justify-between mt-0.5">
-          <p className="text-sm text-gray-500 truncate">
+          <p className="text-sm text-ink-subtle truncate">
             {truncate(session.last_message, 20) || '暂无消息'}
           </p>
-          <span className="text-xs text-gray-600 flex-shrink-0 ml-2">
+          <span className="text-xs text-ink-subtle flex-shrink-0 ml-2">
             {session.message_count}条
           </span>
         </div>

@@ -9,24 +9,24 @@ interface ToastProps {
 
 const toastStyles = {
   success: {
-    bg: 'bg-green-600',
+    bg: 'bg-ok',
     icon: CheckCircle,
-    iconColor: 'text-white',
+    iconColor: 'text-ink',
   },
   error: {
-    bg: 'bg-red-600',
+    bg: 'bg-bad',
     icon: XCircle,
-    iconColor: 'text-white',
+    iconColor: 'text-ink',
   },
   info: {
-    bg: 'bg-blue-600',
+    bg: 'bg-iris',
     icon: Info,
-    iconColor: 'text-white',
+    iconColor: 'text-ink',
   },
   warning: {
-    bg: 'bg-yellow-600',
+    bg: 'bg-warn',
     icon: AlertTriangle,
-    iconColor: 'text-white',
+    iconColor: 'text-ink',
   },
 }
 
@@ -44,10 +44,10 @@ function ToastItem({ toast }: ToastProps) {
       )}
     >
       <Icon className={cn('w-5 h-5 flex-shrink-0 mt-0.5', style.iconColor)} />
-      <p className="flex-1 text-sm text-white font-medium">{toast.message}</p>
+      <p className="flex-1 text-sm text-ink font-medium">{toast.message}</p>
       <button
         onClick={() => removeToast(toast.id)}
-        className="flex-shrink-0 text-white/80 hover:text-white transition-colors"
+        className="flex-shrink-0 text-ink/80 hover:text-ink transition-colors"
       >
         <X className="w-4 h-4" />
       </button>

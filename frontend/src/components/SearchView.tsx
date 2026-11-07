@@ -67,21 +67,21 @@ export default function SearchView({ onClose, onJumpToMessage }: SearchViewProps
   return (
     <div className={layoutClasses.root}>
       {/* 搜索头部 */}
-      <header className="h-16 px-6 flex items-center gap-4 border-b border-dark-600 bg-dark-800/80 backdrop-blur-sm flex-shrink-0">
+      <header className="h-16 px-6 flex items-center gap-4 border-b border-line bg-panel/80 backdrop-blur-sm flex-shrink-0">
         <div className="flex-1 relative">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle" />
           <input
             type="text"
             placeholder="搜索聊天记录..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
-            className="w-full pl-11 pr-4 py-2.5 bg-dark-700 border border-dark-500 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-accent-primary/50 transition-colors"
+            className="w-full pl-11 pr-4 py-2.5 bg-panel-2 border border-line-strong rounded-xl text-ink placeholder-ink-subtle focus:outline-none focus:border-iris/50 transition-colors"
           />
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-white transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-subtle hover:text-ink transition-colors"
             >
               <X size={16} />
             </button>
@@ -89,7 +89,7 @@ export default function SearchView({ onClose, onJumpToMessage }: SearchViewProps
         </div>
         <button
           onClick={onClose}
-          className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+          className="px-4 py-2 text-sm text-ink-muted hover:text-ink transition-colors"
         >
           取消
         </button>
@@ -100,31 +100,31 @@ export default function SearchView({ onClose, onJumpToMessage }: SearchViewProps
         {loading && results.length === 0 ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
-              <div className="w-8 h-8 border-2 border-accent-primary/30 border-t-accent-primary rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-gray-500 text-sm">搜索中...</p>
+              <div className="w-8 h-8 border-2 border-iris/30 border-t-iris rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-ink-subtle text-sm">搜索中...</p>
             </div>
           </div>
         ) : !query ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-center text-gray-500">
+            <div className="text-center text-ink-subtle">
               <Search size={48} className="mx-auto mb-4 opacity-30" />
               <p>输入关键词搜索聊天记录</p>
-              <p className="text-sm mt-2 text-gray-600">支持搜索所有文本消息</p>
+              <p className="text-sm mt-2 text-ink-subtle">支持搜索所有文本消息</p>
             </div>
           </div>
         ) : results.length === 0 ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-center text-gray-500">
+            <div className="text-center text-ink-subtle">
               <MessageCircle size={48} className="mx-auto mb-4 opacity-30" />
               <p>未找到相关消息</p>
-              <p className="text-sm mt-2 text-gray-600">尝试使用其他关键词</p>
+              <p className="text-sm mt-2 text-ink-subtle">尝试使用其他关键词</p>
             </div>
           </div>
         ) : (
           <div className="p-4">
             {/* 结果统计 */}
-            <div className="mb-4 text-sm text-gray-500">
-              找到 <span className="text-accent-primary font-medium">{total}</span> 条相关消息
+            <div className="mb-4 text-sm text-ink-subtle">
+              找到 <span className="text-iris font-medium">{total}</span> 条相关消息
             </div>
 
             {/* 结果列表 */}
@@ -144,11 +144,11 @@ export default function SearchView({ onClose, onJumpToMessage }: SearchViewProps
               <button
                 onClick={handleLoadMore}
                 disabled={loading}
-                className="w-full mt-4 py-3 text-sm text-accent-primary hover:text-accent-secondary transition-colors disabled:opacity-50"
+                className="w-full mt-4 py-3 text-sm text-iris hover:text-flare transition-colors disabled:opacity-50"
               >
                 {loading ? (
                   <span className="inline-flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-accent-primary/30 border-t-accent-primary rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-iris/30 border-t-iris rounded-full animate-spin" />
                     加载中...
                   </span>
                 ) : (
@@ -187,19 +187,19 @@ function SearchResultItem({ result, query, onClick }: SearchResultItemProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full p-4 bg-dark-700/50 hover:bg-dark-600 rounded-xl text-left transition-colors group"
+      className="w-full p-4 bg-panel-2/50 hover:bg-line rounded-xl text-left transition-colors group"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           {/* 会话名称 */}
           <div className="flex items-center gap-2 mb-2">
-            <span className="font-medium text-white">
+            <span className="font-medium text-ink">
               {sessionLabel(result.session_name, result.session_id)}
             </span>
             {result.sender_name && (
               <>
-                <span className="text-gray-600">·</span>
-                <span className="text-sm text-gray-500 flex items-center gap-1">
+                <span className="text-ink-subtle">·</span>
+                <span className="text-sm text-ink-subtle flex items-center gap-1">
                   <User size={12} />
                   {result.sender_name}
                 </span>
@@ -208,12 +208,12 @@ function SearchResultItem({ result, query, onClick }: SearchResultItemProps) {
           </div>
 
           {/* 消息内容 */}
-          <p className="text-sm text-gray-400 leading-relaxed">
+          <p className="text-sm text-ink-muted leading-relaxed">
             {highlightText(result.highlight || truncate(result.content, 100))}
           </p>
 
           {/* 时间 */}
-          <div className="flex items-center gap-1 mt-2 text-xs text-gray-600">
+          <div className="flex items-center gap-1 mt-2 text-xs text-ink-subtle">
             <Calendar size={12} />
             {formatDateTime(result.timestamp)}
           </div>
@@ -222,7 +222,7 @@ function SearchResultItem({ result, query, onClick }: SearchResultItemProps) {
         {/* 跳转箭头 */}
         <ChevronRight
           size={18}
-          className="text-gray-600 group-hover:text-accent-primary transition-colors flex-shrink-0 mt-1"
+          className="text-ink-subtle group-hover:text-iris transition-colors flex-shrink-0 mt-1"
         />
       </div>
     </button>

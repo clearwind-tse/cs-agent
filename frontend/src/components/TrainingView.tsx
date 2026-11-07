@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Database, GitCompareArrows, CircleDashed, CheckCircle2 } from 'lucide-react'
 import ExportView from './ExportView'
+import { StatCard, ChartFrame, StatusDonut, CategoryBars, toChartData } from './ui'
 import {
   getSftSamples,
   extractSftSamples,
@@ -225,24 +228,60 @@ const TrainingView: React.FC = () => {
 
       {/* 统计概览 */}
       {stats && (
-        <div className="stats-overview">
-          <div className="stat-card">
-            <div className="stat-value">{stats.sft_samples.total}</div>
-            <div className="stat-label">SFT 训练样本</div>
+        <>
+          <motion.div
+            initial="hidden"
+            animate="show"
+            transition={{ staggerChildren: 0.05 }}
+            className="stats-overview"
+          >
+            <StatCard
+              label="SFT 训练样本"
+              value={stats.sft_samples.total}
+              hint={`已核准 ${stats.sft_samples.approved}`}
+              icon={<Database size={17} />}
+              tone="iris"
+            />
+            <StatCard
+              label="DPO 偏好对"
+              value={stats.dpo_pairs.total}
+              hint="1 chosen × N rejected"
+              icon={<GitCompareArrows size={17} />}
+              tone="mint"
+            />
+            <StatCard
+              label="待标注"
+              value={stats.dpo_pairs.pending ?? 0}
+              hint="等待业务主管确认"
+              icon={<CircleDashed size={17} />}
+              tone="flare"
+            />
+            <StatCard
+              label="已标注"
+              value={stats.dpo_pairs.annotated ?? 0}
+              hint="已完成偏好确认"
+              icon={<CheckCircle2 size={17} />}
+              tone="mint"
+            />
+          </motion.div>
+
+          {/* 分布图：直接来自 /api/training/statistics 当前快照 */}
+          <div className="training-charts grid gap-4 lg:grid-cols-2">
+            <ChartFrame title="DPO 业务分类分布" subtitle="按偏好对数量 · 当前快照">
+              <CategoryBars data={toChartData(stats.dpo_pairs.by_category)} unit=" 对" />
+            </ChartFrame>
+            <ChartFrame title="偏好标注进度" subtitle="待标注 / 已标注 · 当前快照">
+              <StatusDonut
+                data={[
+                  { name: '已标注', value: stats.dpo_pairs.annotated ?? 0 },
+                  { name: '待标注', value: stats.dpo_pairs.pending ?? 0 },
+                ]}
+                centerLabel="偏好对"
+                unit=" 对"
+              />
+            </ChartFrame>
           </div>
-          <div className="stat-card">
-            <div className="stat-value">{stats.dpo_pairs.total}</div>
-            <div className="stat-label">DPO 偏好对</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">{stats.dpo_pairs.pending ?? 0}</div>
-            <div className="stat-label">待标注</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">{stats.dpo_pairs.annotated ?? 0}</div>
-            <div className="stat-label">已标注</div>
-          </div>
-        </div>
+        </>
       )}
 
       {/* 消息提示 */}
@@ -522,8 +561,8 @@ const TrainingView: React.FC = () => {
                         key={fmt}
                         className={`tab-nav`}
                         style={{
-                          border: exportFormat === fmt ? '1px solid #6366f1' : '1px solid #2d2d30',
-                          color: exportFormat === fmt ? '#6366f1' : '#9ca3af',
+                          border: exportFormat === fmt ? '1px solid rgb(var(--c-iris))' : '1px solid rgb(var(--c-line))',
+                          color: exportFormat === fmt ? 'rgb(var(--c-iris))' : 'rgb(var(--c-ink-subtle))',
                           background: 'transparent',
                           padding: '6px 14px',
                           borderRadius: 8,
@@ -547,11 +586,11 @@ const TrainingView: React.FC = () => {
                 </label>
                 <pre
                   style={{
-                    background: '#0f0f11',
-                    border: '1px solid #2d2d30',
+                    background: 'rgb(var(--c-panel-2))',
+                    border: '1px solid rgb(var(--c-line))',
                     borderRadius: 8,
                     padding: 12,
-                    color: '#d1d5db',
+                    color: 'rgb(var(--c-ink-muted))',
                     fontSize: 12,
                     maxHeight: 320,
                     overflow: 'auto',

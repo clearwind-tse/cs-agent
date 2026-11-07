@@ -267,16 +267,16 @@ ${feedback}
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-dark-800 animate-fade-in h-full overflow-hidden">
+    <div className="flex-1 flex flex-col animate-fade-in h-full overflow-hidden">
       {/* 头部 */}
-      <header className="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-dark-600 bg-dark-800/80 backdrop-blur-sm flex-shrink-0">
+      <header className="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-line bg-panel/80 backdrop-blur-sm flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-primary to-accent-secondary flex items-center justify-center">
-            <Sparkles size={20} className="text-white" />
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-iris to-flare flex items-center justify-center">
+            <Sparkles size={20} className="text-ink" />
           </div>
           <div>
-            <h2 className="font-medium text-white">智能助手</h2>
-            <p className="text-xs text-gray-500">
+            <h2 className="font-medium text-ink">智能助手</h2>
+            <p className="text-xs text-ink-subtle">
               快速检索红包 · 返利 · 霸王餐 · 订单处理
               {sessionId && ' · 当前会话'}
             </p>
@@ -284,7 +284,7 @@ ${feedback}
         </div>
         <button
           onClick={onClose}
-          className="p-2 rounded-lg hover:bg-dark-600 text-gray-400 hover:text-white transition-colors"
+          className="p-2 rounded-lg hover:bg-line text-ink-muted hover:text-ink transition-colors"
         >
           <X size={18} />
         </button>
@@ -294,10 +294,12 @@ ${feedback}
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center text-gray-500 max-w-md">
-              <Sparkles size={48} className="mx-auto mb-4 opacity-30" />
-              <h3 className="text-lg font-medium text-gray-400 mb-2">智能助手</h3>
-              <p className="text-sm mb-4">
+            <div className="text-center text-ink-subtle max-w-md">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-iris/30 bg-iris/10 shadow-glow">
+                <Sparkles size={28} className="text-mint" />
+              </div>
+              <h3 className="font-display text-2xl font-bold tracking-tight text-ink mb-2">智能助手</h3>
+              <p className="text-sm text-ink-muted mb-4">
                 基于聊天记录，快速检索客服话术和用户问题处理
               </p>
 
@@ -322,7 +324,7 @@ ${feedback}
                       }
                     })
                   }}
-                  className="px-4 py-2 bg-accent-primary/20 text-accent-primary rounded-lg hover:bg-accent-primary/30 transition-colors text-sm border border-accent-primary/20"
+                  className="px-4 py-2 bg-iris/20 text-iris rounded-lg hover:bg-iris/30 transition-colors text-sm border border-iris/20"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <span className="text-base">📋</span>
@@ -332,7 +334,7 @@ ${feedback}
               </div>
 
               <div className="space-y-2 text-left">
-                <p className="text-xs text-gray-600">试试问：</p>
+                <p className="text-xs text-ink-subtle">试试问：</p>
                 {[
                   '霸王餐怎么参加？',
                   '客户嫌返利太少怎么回复？',
@@ -342,7 +344,7 @@ ${feedback}
                   <button
                     key={i}
                     onClick={() => setInput(q)}
-                    className="block w-full px-3 py-2 text-sm text-left text-gray-400 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors"
+                    className="block w-full px-3 py-2 text-sm text-left text-ink-muted bg-panel/60 border border-line rounded-xl hover:border-iris/40 hover:text-ink backdrop-blur-sm transition-all"
                   >
                     {q}
                   </button>
@@ -361,7 +363,7 @@ ${feedback}
       </div>
 
       {/* 输入框 */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-dark-600 flex-shrink-0">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-line flex-shrink-0">
         <div className="flex gap-2 sm:gap-3">
           <input
             type="text"
@@ -369,12 +371,12 @@ ${feedback}
             onChange={(e) => setInput(e.target.value)}
             placeholder="输入问题..."
             disabled={loading}
-            className="flex-1 min-w-0 px-3 sm:px-4 py-3 bg-dark-700 border border-dark-500 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-accent-primary/50 transition-colors disabled:opacity-50"
+            className="flex-1 min-w-0 px-3 sm:px-4 py-3 bg-panel-2 border border-line-strong rounded-xl text-ink placeholder-ink-subtle focus:outline-none focus:border-iris/50 transition-colors disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            className="px-3 sm:px-4 py-3 bg-accent-primary hover:bg-accent-secondary text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+            className="px-3 sm:px-4 py-3 bg-iris hover:bg-flare text-ink rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
           >
             <Send size={18} />
           </button>
@@ -408,13 +410,13 @@ function ChatMessage({ message, isStreaming = false, onJumpToMessage, onRefine }
       <div className={cn(
         'w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0',
         isUser
-          ? 'bg-gradient-to-br from-green-500 to-emerald-600'
-          : 'bg-gradient-to-br from-accent-primary to-accent-secondary'
+          ? 'bg-gradient-to-br from-mint to-mint'
+          : 'bg-gradient-to-br from-iris to-flare'
       )}>
         {isUser ? (
-          <span className="text-white text-sm font-medium">我</span>
+          <span className="text-ink text-sm font-medium">我</span>
         ) : (
-          <Sparkles size={16} className="text-white" />
+          <Sparkles size={16} className="text-ink" />
         )}
       </div>
 
@@ -422,19 +424,19 @@ function ChatMessage({ message, isStreaming = false, onJumpToMessage, onRefine }
         <div className={cn(
           'inline-block px-4 py-3 rounded-2xl text-sm text-left relative group',
           isUser
-            ? 'bg-accent-primary text-white rounded-br-md'
-            : 'bg-dark-600 text-gray-200 rounded-bl-md'
+            ? 'bg-iris text-ink rounded-br-md'
+            : 'bg-line text-ink rounded-bl-md'
         )}>
           <p className="whitespace-pre-wrap break-words">
             {message.content}
-            {isStreaming && <span className="inline-block w-1.5 h-4 bg-accent-primary ml-0.5 animate-pulse align-middle" />}
+            {isStreaming && <span className="inline-block w-1.5 h-4 bg-iris ml-0.5 animate-pulse align-middle" />}
           </p>
 
           {/* 编辑/反馈按钮 */}
           {!isUser && !isStreaming && onRefine && (
             <button
               onClick={() => setShowFeedback(!showFeedback)}
-              className="absolute top-2 right-2 p-1.5 rounded-lg bg-dark-500/80 hover:bg-dark-400 text-gray-500 hover:text-yellow-400 transition-all opacity-0 group-hover:opacity-100"
+              className="absolute top-2 right-2 p-1.5 rounded-lg bg-line-strong/80 hover:bg-ink-subtle text-ink-subtle hover:text-warn transition-all opacity-0 group-hover:opacity-100"
               title="反馈优化"
             >
               <Pencil size={12} />
@@ -444,8 +446,8 @@ function ChatMessage({ message, isStreaming = false, onJumpToMessage, onRefine }
 
         {/* 反馈面板 */}
         {showFeedback && !isUser && (
-          <div className="mt-2 bg-dark-700 border border-dark-500 rounded-xl p-3 text-left animate-in fade-in slide-in-from-top-2 duration-200">
-            <p className="text-xs text-gray-400 mb-2 flex items-center gap-1.5">
+          <div className="mt-2 bg-panel-2 border border-line-strong rounded-xl p-3 text-left animate-fade-in duration-200">
+            <p className="text-xs text-ink-muted mb-2 flex items-center gap-1.5">
               <ThumbsDown size={12} />
               告诉 AI 哪里不好，它会重新生成
             </p>
@@ -453,14 +455,14 @@ function ChatMessage({ message, isStreaming = false, onJumpToMessage, onRefine }
               value={feedbackText}
               onChange={e => setFeedbackText(e.target.value)}
               placeholder="例如：回答太笼统，需要给出具体话术示例；或者：引用的数据不对应..."
-              className="w-full bg-dark-800 border border-dark-600 text-gray-200 text-sm rounded-lg p-2.5 outline-none focus:ring-1 focus:ring-accent-primary/50 resize-none placeholder:text-gray-600"
+              className="w-full bg-panel border border-line text-ink text-sm rounded-lg p-2.5 outline-none focus:ring-1 focus:ring-iris/50 resize-none placeholder:text-ink-subtle"
               rows={2}
               autoFocus
             />
             <div className="flex justify-end gap-2 mt-2">
               <button
                 onClick={() => { setShowFeedback(false); setFeedbackText('') }}
-                className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+                className="px-3 py-1.5 text-xs text-ink-muted hover:text-ink transition-colors"
               >
                 取消
               </button>
@@ -473,7 +475,7 @@ function ChatMessage({ message, isStreaming = false, onJumpToMessage, onRefine }
                   }
                 }}
                 disabled={!feedbackText.trim()}
-                className="px-3 py-1.5 text-xs bg-accent-primary text-white rounded-lg hover:bg-accent-secondary transition-colors flex items-center gap-1 disabled:opacity-40"
+                className="px-3 py-1.5 text-xs bg-iris text-ink rounded-lg hover:bg-flare transition-colors flex items-center gap-1 disabled:opacity-40"
               >
                 <RefreshCw size={12} />
                 重新生成
@@ -485,7 +487,7 @@ function ChatMessage({ message, isStreaming = false, onJumpToMessage, onRefine }
         {/* 来源引用 */}
         {message.sources && message.sources.length > 0 && (
           <div className="mt-2 space-y-1 text-left">
-            <p className="text-xs text-gray-600">参考来源:</p>
+            <p className="text-xs text-ink-subtle">参考来源:</p>
             {message.sources.map((source, i) => {
               const canJump = onJumpToMessage && source.session_id
               return (
@@ -498,15 +500,15 @@ function ChatMessage({ message, isStreaming = false, onJumpToMessage, onRefine }
                     }
                   }}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 bg-dark-700/50 rounded-lg text-xs max-w-full overflow-hidden",
-                    canJump && "cursor-pointer hover:bg-dark-600/70 transition-colors"
+                    "flex items-center gap-2 px-3 py-1.5 bg-panel-2/50 rounded-lg text-xs max-w-full overflow-hidden",
+                    canJump && "cursor-pointer hover:bg-line/70 transition-colors"
                   )}
                 >
-                  <ExternalLink size={12} className="text-accent-primary flex-shrink-0" />
-                  <span className="text-gray-400 truncate flex-1 min-w-0">
+                  <ExternalLink size={12} className="text-iris flex-shrink-0" />
+                  <span className="text-ink-muted truncate flex-1 min-w-0">
                     {source.summary?.slice(0, 50) || maskSessionId(source.session_id)}
                   </span>
-                  <span className="text-gray-600 flex-shrink-0">
+                  <span className="text-ink-subtle flex-shrink-0">
                     {(source.similarity * 100).toFixed(0)}%
                   </span>
                 </div>
@@ -537,26 +539,26 @@ function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center animate-fade-in">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="absolute inset-0 bg-scrim/60 backdrop-blur-sm" onClick={onCancel} />
       
-      <div className="relative w-full max-w-sm bg-dark-900 border border-dark-600 rounded-2xl shadow-2xl overflow-hidden animate-scale-in mx-4">
+      <div className="relative w-full max-w-sm bg-canvas border border-line rounded-2xl shadow-2xl overflow-hidden animate-scale-in mx-4">
         <div className="p-6">
-          <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
-          <p className="text-gray-400 text-sm leading-relaxed">
+          <h3 className="text-xl font-bold text-ink mb-2">{title}</h3>
+          <p className="text-ink-muted text-sm leading-relaxed">
             {message}
           </p>
         </div>
         
-        <div className="px-6 py-4 border-t border-dark-600/50 bg-dark-800/50 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+        <div className="px-6 py-4 border-t border-line/50 bg-panel/50 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
           <button
             onClick={onCancel}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-dark-500 text-gray-300 hover:text-white hover:bg-dark-700/50 transition-all text-sm font-medium"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-line-strong text-ink hover:text-ink hover:bg-panel-2/50 transition-all text-sm font-medium"
           >
             取消
           </button>
           <button
             onClick={onConfirm}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-accent-primary/10 text-accent-primary hover:bg-accent-primary border border-accent-primary/20 hover:border-accent-primary hover:text-white transition-all text-sm font-medium shadow-sm"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-iris/10 text-iris hover:bg-iris border border-iris/20 hover:border-iris hover:text-ink transition-all text-sm font-medium shadow-sm"
           >
             确认执行
           </button>

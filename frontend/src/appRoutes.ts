@@ -1,4 +1,5 @@
 export type ViewMode =
+  | 'overview'
   | 'chat'
   | 'search'
   | 'ai'
@@ -38,6 +39,7 @@ export const getAgentPaneFromPath = (pathname: string): AgentPane => {
 }
 
 const VIEW_PATHS: Record<Exclude<ViewMode, 'chat'>, string> = {
+  overview: '/overview',
   search: '/search',
   ai: '/ai',
   agent: '/agent',

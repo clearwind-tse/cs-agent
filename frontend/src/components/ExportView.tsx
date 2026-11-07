@@ -77,9 +77,9 @@ const FORMATS: ExportFormat[] = [
 ]
 
 const QUALITIES = [
-  { id: 'high', name: '高质量', description: '完整问答、技术讨论', color: 'text-green-400' },
-  { id: 'medium', name: '中等', description: '有价值的内容', color: 'text-yellow-400' },
-  { id: 'low', name: '低质量', description: '包含闲聊', color: 'text-orange-400' },
+  { id: 'high', name: '高质量', description: '完整问答、技术讨论', color: 'text-ok' },
+  { id: 'medium', name: '中等', description: '有价值的内容', color: 'text-warn' },
+  { id: 'low', name: '低质量', description: '包含闲聊', color: 'text-warn' },
 ]
 
 const CATEGORIES = [
@@ -349,23 +349,23 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
   return (
     <div className={cn(
       "flex flex-col overflow-hidden animate-fade-in",
-      embedded ? "w-full" : "flex-1 h-full bg-dark-800"
+      embedded ? "w-full" : "flex-1 h-full bg-panel"
     )}>
       {/* 头部（嵌入到训练数据管理时不显示独立头部） */}
       {!embedded && (
-        <header className="h-16 px-6 flex items-center justify-between border-b border-dark-600 bg-dark-800/80 backdrop-blur-sm flex-shrink-0">
+        <header className="h-16 px-6 flex items-center justify-between border-b border-line bg-panel/80 backdrop-blur-sm flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-              <Download size={20} className="text-white" />
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-mint to-mint flex items-center justify-center">
+              <Download size={20} className="text-ink" />
             </div>
             <div>
-              <h2 className="font-medium text-white">导出训练数据</h2>
-              <p className="text-xs text-gray-500">生成客服 AI 微调数据集</p>
+              <h2 className="font-medium text-ink">导出训练数据</h2>
+              <p className="text-xs text-ink-subtle">生成客服 AI 微调数据集</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-dark-600 text-gray-400 hover:text-white transition-colors"
+            className="p-2 rounded-lg hover:bg-line text-ink-muted hover:text-ink transition-colors"
           >
             <X size={18} />
           </button>
@@ -380,28 +380,28 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
             {llmTask && (
               <div className={cn(
                 "p-4 rounded-xl border",
-                llmTask.status === 'running' ? "bg-yellow-500/10 border-yellow-500/30" :
-                llmTask.status === 'done' ? "bg-green-500/10 border-green-500/30" :
-                "bg-red-500/10 border-red-500/30"
+                llmTask.status === 'running' ? "bg-warn/10 border-warn/30" :
+                llmTask.status === 'done' ? "bg-ok/10 border-ok/30" :
+                "bg-bad/10 border-bad/30"
               )}>
                 {llmTask.status === 'running' && (
                   <>
                     <div className="flex items-center gap-2 mb-3">
-                      <Loader2 size={16} className="animate-spin text-yellow-400" />
-                      <span className="text-yellow-400 font-medium text-sm">LLM 改写进行中...</span>
-                      <span className="text-gray-500 text-xs ml-auto flex items-center gap-1">
+                      <Loader2 size={16} className="animate-spin text-warn" />
+                      <span className="text-warn font-medium text-sm">LLM 改写进行中...</span>
+                      <span className="text-ink-subtle text-xs ml-auto flex items-center gap-1">
                         <Clock size={12} />
                         已用 {formatTime(llmTask.elapsed_seconds)}
                         {llmTask.eta_seconds && ` · 预计剩余 ${formatTime(llmTask.eta_seconds)}`}
                       </span>
                     </div>
-                    <div className="w-full bg-dark-600 rounded-full h-2 mb-2">
+                    <div className="w-full bg-line rounded-full h-2 mb-2">
                       <div
-                        className="bg-gradient-to-r from-yellow-500 to-amber-400 h-2 rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-warn to-warn h-2 rounded-full transition-all duration-500"
                         style={{ width: `${llmTask.total > 0 ? (llmTask.completed / llmTask.total * 100) : 0}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-ink-muted">
                       {llmTask.completed} / {llmTask.total} 条 ({llmTask.total > 0 ? Math.round(llmTask.completed / llmTask.total * 100) : 0}%)
                     </p>
                   </>
@@ -410,43 +410,43 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                 {llmTask.status === 'done' && (
                   <>
                     <div className="flex items-center gap-2 mb-3">
-                      <Check size={16} className="text-green-400" />
-                      <span className="text-green-400 font-medium text-sm">LLM 改写完成！</span>
-                      <span className="text-gray-500 text-xs ml-auto">
+                      <Check size={16} className="text-ok" />
+                      <span className="text-ok font-medium text-sm">LLM 改写完成！</span>
+                      <span className="text-ink-subtle text-xs ml-auto">
                         共 {llmTask.output_count} 条有效数据 · 耗时 {formatTime(llmTask.elapsed_seconds)}
                       </span>
                     </div>
                     {llmTask.stats && (
                       <div className="grid grid-cols-4 gap-2 mb-3">
-                        <div className="bg-dark-700 rounded-lg p-2 text-center">
-                          <p className="text-white font-bold text-sm">{llmTask.stats.input}</p>
-                          <p className="text-xs text-gray-500">输入</p>
+                        <div className="bg-panel-2 rounded-lg p-2 text-center">
+                          <p className="text-ink font-bold text-sm">{llmTask.stats.input}</p>
+                          <p className="text-xs text-ink-subtle">输入</p>
                         </div>
-                        <div className="bg-dark-700 rounded-lg p-2 text-center">
-                          <p className="text-green-400 font-bold text-sm">{llmTask.stats.rewritten}</p>
-                          <p className="text-xs text-gray-500">改写成功</p>
+                        <div className="bg-panel-2 rounded-lg p-2 text-center">
+                          <p className="text-ok font-bold text-sm">{llmTask.stats.rewritten}</p>
+                          <p className="text-xs text-ink-subtle">改写成功</p>
                         </div>
-                        <div className="bg-dark-700 rounded-lg p-2 text-center">
-                          <p className="text-yellow-400 font-bold text-sm">{llmTask.stats.noise_filtered + (llmTask.stats.noise_post_filtered || 0)}</p>
-                          <p className="text-xs text-gray-500">噪声过滤</p>
+                        <div className="bg-panel-2 rounded-lg p-2 text-center">
+                          <p className="text-warn font-bold text-sm">{llmTask.stats.noise_filtered + (llmTask.stats.noise_post_filtered || 0)}</p>
+                          <p className="text-xs text-ink-subtle">噪声过滤</p>
                         </div>
-                        <div className="bg-dark-700 rounded-lg p-2 text-center">
-                          <p className="text-red-400 font-bold text-sm">{llmTask.stats.failed}</p>
-                          <p className="text-xs text-gray-500">失败</p>
+                        <div className="bg-panel-2 rounded-lg p-2 text-center">
+                          <p className="text-bad font-bold text-sm">{llmTask.stats.failed}</p>
+                          <p className="text-xs text-ink-subtle">失败</p>
                         </div>
                       </div>
                     )}
                     <button
                       onClick={downloadLLMResult}
-                      className="w-full py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
+                      className="w-full py-2.5 bg-ok hover:bg-ok text-ink rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
                     >
                       <Download size={16} />
                       下载 CSV ({llmTask.output_count} 条)
                     </button>
                     {tosResult && tosResult.success && (
-                      <div className="mt-2 flex items-center gap-2 text-xs text-emerald-400">
+                      <div className="mt-2 flex items-center gap-2 text-xs text-ok">
                         <Cloud size={14} />
-                        <span>已同步上传 TOS: <span className="font-mono text-gray-500">{tosResult.key}</span></span>
+                        <span>已同步上传 TOS: <span className="font-mono text-ink-subtle">{tosResult.key}</span></span>
                       </div>
                     )}
                   </>
@@ -454,8 +454,8 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
 
                 {llmTask.status === 'error' && (
                   <div className="flex items-center gap-2">
-                    <X size={16} className="text-red-400" />
-                    <span className="text-red-400 text-sm">{llmTask.error || '任务失败'}</span>
+                    <X size={16} className="text-bad" />
+                    <span className="text-bad text-sm">{llmTask.error || '任务失败'}</span>
                   </div>
                 )}
               </div>
@@ -463,8 +463,8 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
 
             {/* 数据来源 */}
             <section>
-              <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                <Database size={16} className="text-accent-primary" />
+              <h3 className="text-sm font-medium text-ink mb-3 flex items-center gap-2">
+                <Database size={16} className="text-iris" />
                 数据来源
               </h3>
               <div className="grid grid-cols-2 gap-3">
@@ -473,44 +473,44 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                   className={cn(
                     'p-4 rounded-xl border text-left transition-all',
                     dataSource === 'all'
-                      ? 'border-accent-primary bg-accent-primary/10'
-                      : 'border-dark-500 hover:border-dark-400 bg-dark-700'
+                      ? 'border-iris bg-iris/10'
+                      : 'border-line-strong hover:border-ink-subtle bg-panel-2'
                   )}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <Database size={16} className="text-blue-400" />
-                      <span className="font-medium text-white">全部数据</span>
+                      <Database size={16} className="text-info" />
+                      <span className="font-medium text-ink">全部数据</span>
                     </div>
-                    {dataSource === 'all' && <Check size={16} className="text-accent-primary" />}
+                    {dataSource === 'all' && <Check size={16} className="text-iris" />}
                   </div>
-                  <p className="text-xs text-gray-500">标注数据 + 自定义/AI生成数据</p>
+                  <p className="text-xs text-ink-subtle">标注数据 + 自定义/AI生成数据</p>
                 </button>
                 <button
                   onClick={() => setDataSource('generated')}
                   className={cn(
                     'p-4 rounded-xl border text-left transition-all',
                     dataSource === 'generated'
-                      ? 'border-purple-500 bg-purple-500/10'
-                      : 'border-dark-500 hover:border-dark-400 bg-dark-700'
+                      ? 'border-iris bg-iris/10'
+                      : 'border-line-strong hover:border-ink-subtle bg-panel-2'
                   )}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <Bot size={16} className="text-purple-400" />
-                      <span className="font-medium text-white">仅AI生成</span>
+                      <Bot size={16} className="text-iris" />
+                      <span className="font-medium text-ink">仅AI生成</span>
                     </div>
-                    {dataSource === 'generated' && <Check size={16} className="text-purple-400" />}
+                    {dataSource === 'generated' && <Check size={16} className="text-iris" />}
                   </div>
-                  <p className="text-xs text-gray-500">仅导出AI生成的高质量数据</p>
+                  <p className="text-xs text-ink-subtle">仅导出AI生成的高质量数据</p>
                 </button>
               </div>
             </section>
 
             {/* 导出格式 */}
             <section>
-              <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                <FileJson size={16} className="text-accent-primary" />
+              <h3 className="text-sm font-medium text-ink mb-3 flex items-center gap-2">
+                <FileJson size={16} className="text-iris" />
                 导出格式
               </h3>
               <div className="grid grid-cols-2 gap-3">
@@ -521,18 +521,18 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                     className={cn(
                       'p-4 rounded-xl border text-left transition-all',
                       config.format === format.id
-                        ? 'border-accent-primary bg-accent-primary/10'
-                        : 'border-dark-500 hover:border-dark-400 bg-dark-700'
+                        ? 'border-iris bg-iris/10'
+                        : 'border-line-strong hover:border-ink-subtle bg-panel-2'
                     )}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-white">{format.name}</span>
+                      <span className="font-medium text-ink">{format.name}</span>
                       {config.format === format.id && (
-                        <Check size={16} className="text-accent-primary" />
+                        <Check size={16} className="text-iris" />
                       )}
                     </div>
-                    <p className="text-xs text-gray-500">{format.description}</p>
-                    <span className="text-xs text-gray-600 mt-1 inline-block">.{format.extension}</span>
+                    <p className="text-xs text-ink-subtle">{format.description}</p>
+                    <span className="text-xs text-ink-subtle mt-1 inline-block">.{format.extension}</span>
                   </button>
                 ))}
               </div>
@@ -541,16 +541,16 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
             {/* RAG 知识库清洗模式 (仅 RAG 格式显示) */}
             {config.format === 'rag' && (
               <section>
-                <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                  <Sparkles size={16} className="text-emerald-400" />
+                <h3 className="text-sm font-medium text-ink mb-3 flex items-center gap-2">
+                  <Sparkles size={16} className="text-ok" />
                   知识库清洗模式
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: 'distill', name: '🧪 知识蒸馏', desc: '按意图聚合→LLM蒸馏标准知识→合并手写知识库（推荐）', color: 'text-blue-400' },
-                    { id: 'rule', name: '📏 规则清洗', desc: '去重+过滤+补元数据，快速免费', color: 'text-emerald-400' },
-                    { id: 'llm', name: '✨ LLM 改写', desc: 'AI逐条改写为知识条目（后台异步）', color: 'text-yellow-400' },
-                    { id: 'raw', name: '📄 原始数据', desc: '不做任何清洗', color: 'text-gray-400' },
+                    { id: 'distill', name: '🧪 知识蒸馏', desc: '按意图聚合→LLM蒸馏标准知识→合并手写知识库（推荐）', color: 'text-info' },
+                    { id: 'rule', name: '📏 规则清洗', desc: '去重+过滤+补元数据，快速免费', color: 'text-ok' },
+                    { id: 'llm', name: '✨ LLM 改写', desc: 'AI逐条改写为知识条目（后台异步）', color: 'text-warn' },
+                    { id: 'raw', name: '📄 原始数据', desc: '不做任何清洗', color: 'text-ink-muted' },
                   ].map(mode => (
                     <button
                       key={mode.id}
@@ -558,52 +558,52 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                       className={cn(
                         'p-3 rounded-xl border text-left transition-all',
                         config.rag_mode === mode.id
-                          ? mode.id === 'distill' ? 'border-blue-500 bg-blue-500/10' : 'border-emerald-500 bg-emerald-500/10'
-                          : 'border-dark-500 hover:border-dark-400 bg-dark-700'
+                          ? mode.id === 'distill' ? 'border-iris bg-iris/10' : 'border-ok bg-ok/10'
+                          : 'border-line-strong hover:border-ink-subtle bg-panel-2'
                       )}
                     >
                       <span className={cn('font-medium text-sm', mode.color)}>{mode.name}</span>
-                      <p className="text-xs text-gray-500 mt-1">{mode.desc}</p>
+                      <p className="text-xs text-ink-subtle mt-1">{mode.desc}</p>
                     </button>
                   ))}
                 </div>
                 {config.rag_mode === 'distill' && (
-                  <div className="mt-3 space-y-3 bg-blue-500/5 border border-blue-500/20 p-3 rounded-lg">
-                    <p className="text-xs text-blue-400/80">
+                  <div className="mt-3 space-y-3 bg-iris/5 border border-iris/20 p-3 rounded-lg">
+                    <p className="text-xs text-info/80">
                       🧪 蒸馏模式：将同类对话按意图分组，LLM 从多段对话中提炼出标准化知识条目，并与手写知识库合并
                     </p>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-white">合并手写知识库</p>
-                        <p className="text-xs text-gray-500">将 KNOWLEDGE_BASE 中的高质量条目合并（优先）</p>
+                        <p className="text-xs text-ink">合并手写知识库</p>
+                        <p className="text-xs text-ink-subtle">将 KNOWLEDGE_BASE 中的高质量条目合并（优先）</p>
                       </div>
                       <button
                         onClick={() => setConfig(prev => ({ ...prev, distill_include_kb: !prev.distill_include_kb }))}
                         className={cn(
                           'w-10 h-5 rounded-full transition-colors relative',
-                          config.distill_include_kb ? 'bg-blue-500' : 'bg-dark-500'
+                          config.distill_include_kb ? 'bg-iris' : 'bg-line-strong'
                         )}
                       >
                         <div className={cn(
-                          'w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform',
+                          'w-4 h-4 rounded-full bg-ink absolute top-0.5 transition-transform',
                           config.distill_include_kb ? 'translate-x-5' : 'translate-x-0.5'
                         )} />
                       </button>
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-white">展开问法变体</p>
-                        <p className="text-xs text-gray-500">每个 variant 独立一行（火山引擎兼容）</p>
+                        <p className="text-xs text-ink">展开问法变体</p>
+                        <p className="text-xs text-ink-subtle">每个 variant 独立一行（火山引擎兼容）</p>
                       </div>
                       <button
                         onClick={() => setConfig(prev => ({ ...prev, distill_expand_variants: !prev.distill_expand_variants }))}
                         className={cn(
                           'w-10 h-5 rounded-full transition-colors relative',
-                          config.distill_expand_variants ? 'bg-blue-500' : 'bg-dark-500'
+                          config.distill_expand_variants ? 'bg-iris' : 'bg-line-strong'
                         )}
                       >
                         <div className={cn(
-                          'w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform',
+                          'w-4 h-4 rounded-full bg-ink absolute top-0.5 transition-transform',
                           config.distill_expand_variants ? 'translate-x-5' : 'translate-x-0.5'
                         )} />
                       </button>
@@ -611,7 +611,7 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                   </div>
                 )}
                 {config.rag_mode === 'llm' && (
-                  <p className="text-xs text-yellow-400/80 mt-2 bg-yellow-400/5 p-2 rounded-lg">
+                  <p className="text-xs text-warn/80 mt-2 bg-warn/5 p-2 rounded-lg">
                     ⚠️ LLM 改写为后台异步任务，点击导出后会启动任务并显示实时进度，完成后可直接下载
                   </p>
                 )}
@@ -620,8 +620,8 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
 
             {/* 质量筛选 */}
             <section>
-              <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                <Sparkles size={16} className="text-accent-primary" />
+              <h3 className="text-sm font-medium text-ink mb-3 flex items-center gap-2">
+                <Sparkles size={16} className="text-iris" />
                 最低质量要求
               </h3>
               <div className="flex gap-3">
@@ -632,12 +632,12 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                     className={cn(
                       'flex-1 p-3 rounded-xl border text-center transition-all',
                       config.min_quality === q.id
-                        ? 'border-accent-primary bg-accent-primary/10'
-                        : 'border-dark-500 hover:border-dark-400 bg-dark-700'
+                        ? 'border-iris bg-iris/10'
+                        : 'border-line-strong hover:border-ink-subtle bg-panel-2'
                     )}
                   >
                     <span className={cn('font-medium', q.color)}>{q.name}</span>
-                    <p className="text-xs text-gray-500 mt-1">{q.description}</p>
+                    <p className="text-xs text-ink-subtle mt-1">{q.description}</p>
                   </button>
                 ))}
               </div>
@@ -645,10 +645,10 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
 
             {/* 内容分类 */}
             <section>
-              <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                <Filter size={16} className="text-accent-primary" />
+              <h3 className="text-sm font-medium text-ink mb-3 flex items-center gap-2">
+                <Filter size={16} className="text-iris" />
                 内容分类筛选
-                <span className="text-xs text-gray-500 font-normal">（不选则导出全部）</span>
+                <span className="text-xs text-ink-subtle font-normal">（不选则导出全部）</span>
               </h3>
               <div className="flex flex-wrap gap-2">
                 {CATEGORIES.map(cat => (
@@ -658,8 +658,8 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                     className={cn(
                       'px-4 py-2 rounded-lg border transition-all flex items-center gap-2',
                       config.categories.includes(cat.id)
-                        ? 'border-accent-primary bg-accent-primary/10 text-white'
-                        : 'border-dark-500 hover:border-dark-400 bg-dark-700 text-gray-400'
+                        ? 'border-iris bg-iris/10 text-ink'
+                        : 'border-line-strong hover:border-ink-subtle bg-panel-2 text-ink-muted'
                     )}
                   >
                     <span>{cat.icon}</span>
@@ -671,22 +671,22 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
 
             {/* 高级设置 */}
             <section>
-              <h3 className="text-sm font-medium text-gray-300 mb-3">高级设置</h3>
-              <div className="space-y-4 bg-dark-700 rounded-xl p-4">
+              <h3 className="text-sm font-medium text-ink mb-3">高级设置</h3>
+              <div className="space-y-4 bg-panel-2 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-white">包含 System Prompt</p>
-                    <p className="text-xs text-gray-500">在对话开头添加系统提示</p>
+                    <p className="text-sm text-ink">包含 System Prompt</p>
+                    <p className="text-xs text-ink-subtle">在对话开头添加系统提示</p>
                   </div>
                   <button
                     onClick={() => setConfig(prev => ({ ...prev, include_system_prompt: !prev.include_system_prompt }))}
                     className={cn(
                       'w-12 h-6 rounded-full transition-colors relative',
-                      config.include_system_prompt ? 'bg-accent-primary' : 'bg-dark-500'
+                      config.include_system_prompt ? 'bg-iris' : 'bg-line-strong'
                     )}
                   >
                     <div className={cn(
-                      'w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform',
+                      'w-5 h-5 rounded-full bg-ink absolute top-0.5 transition-transform',
                       config.include_system_prompt ? 'translate-x-6' : 'translate-x-0.5'
                     )} />
                   </button>
@@ -694,8 +694,8 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-white">对话切分时间窗口</p>
-                    <span className="text-sm text-accent-primary">{config.time_window_seconds}秒</span>
+                    <p className="text-sm text-ink">对话切分时间窗口</p>
+                    <span className="text-sm text-iris">{config.time_window_seconds}秒</span>
                   </div>
                   <input
                     type="range"
@@ -704,15 +704,15 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                     step={60}
                     value={config.time_window_seconds}
                     onChange={e => setConfig(prev => ({ ...prev, time_window_seconds: parseInt(e.target.value) }))}
-                    className="w-full accent-accent-primary"
+                    className="w-full accent-iris"
                   />
-                  <p className="text-xs text-gray-500 mt-1">超过此时间间隔的消息将被切分为不同对话</p>
+                  <p className="text-xs text-ink-subtle mt-1">超过此时间间隔的消息将被切分为不同对话</p>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-white">单对话最大轮次</p>
-                    <span className="text-sm text-accent-primary">{config.max_turns_per_conversation}轮</span>
+                    <p className="text-sm text-ink">单对话最大轮次</p>
+                    <span className="text-sm text-iris">{config.max_turns_per_conversation}轮</span>
                   </div>
                   <input
                     type="range"
@@ -721,7 +721,7 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                     step={5}
                     value={config.max_turns_per_conversation}
                     onChange={e => setConfig(prev => ({ ...prev, max_turns_per_conversation: parseInt(e.target.value) }))}
-                    className="w-full accent-accent-primary"
+                    className="w-full accent-iris"
                   />
                 </div>
               </div>
@@ -729,26 +729,26 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
 
             {/* AI 增强 */}
             <section>
-              <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                <Sparkles size={16} className="text-yellow-400" />
+              <h3 className="text-sm font-medium text-ink mb-3 flex items-center gap-2">
+                <Sparkles size={16} className="text-warn" />
                 AI 增强
-                <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded">推荐</span>
+                <span className="text-xs text-warn bg-warn/10 px-2 py-0.5 rounded">推荐</span>
               </h3>
-              <div className="space-y-4 bg-dark-700 rounded-xl p-4">
+              <div className="space-y-4 bg-panel-2 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-white">LLM 质量评分</p>
-                    <p className="text-xs text-gray-500">用大模型评估每段对话质量，过滤低质量数据</p>
+                    <p className="text-sm text-ink">LLM 质量评分</p>
+                    <p className="text-xs text-ink-subtle">用大模型评估每段对话质量，过滤低质量数据</p>
                   </div>
                   <button
                     onClick={() => setConfig(prev => ({ ...prev, use_llm_scoring: !prev.use_llm_scoring }))}
                     className={cn(
                       'w-12 h-6 rounded-full transition-colors relative',
-                      config.use_llm_scoring ? 'bg-yellow-500' : 'bg-dark-500'
+                      config.use_llm_scoring ? 'bg-warn' : 'bg-line-strong'
                     )}
                   >
                     <div className={cn(
-                      'w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform',
+                      'w-5 h-5 rounded-full bg-ink absolute top-0.5 transition-transform',
                       config.use_llm_scoring ? 'translate-x-6' : 'translate-x-0.5'
                     )} />
                   </button>
@@ -757,8 +757,8 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                 {config.use_llm_scoring && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm text-white">最低评分</p>
-                      <span className="text-sm text-yellow-400">{config.llm_min_score} 分</span>
+                      <p className="text-sm text-ink">最低评分</p>
+                      <span className="text-sm text-warn">{config.llm_min_score} 分</span>
                     </div>
                     <input
                       type="range"
@@ -767,26 +767,26 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                       step={0.5}
                       value={config.llm_min_score}
                       onChange={e => setConfig(prev => ({ ...prev, llm_min_score: parseFloat(e.target.value) }))}
-                      className="w-full accent-yellow-500"
+                      className="w-full accent-warn"
                     />
-                    <p className="text-xs text-gray-500 mt-1">低于此分数的对话将被过滤（需要配置 LLM API）</p>
+                    <p className="text-xs text-ink-subtle mt-1">低于此分数的对话将被过滤（需要配置 LLM API）</p>
                   </div>
                 )}
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-white">智能去重</p>
-                    <p className="text-xs text-gray-500">移除相似度过高的重复对话</p>
+                    <p className="text-sm text-ink">智能去重</p>
+                    <p className="text-xs text-ink-subtle">移除相似度过高的重复对话</p>
                   </div>
                   <button
                     onClick={() => setConfig(prev => ({ ...prev, deduplicate: !prev.deduplicate }))}
                     className={cn(
                       'w-12 h-6 rounded-full transition-colors relative',
-                      config.deduplicate ? 'bg-yellow-500' : 'bg-dark-500'
+                      config.deduplicate ? 'bg-warn' : 'bg-line-strong'
                     )}
                   >
                     <div className={cn(
-                      'w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform',
+                      'w-5 h-5 rounded-full bg-ink absolute top-0.5 transition-transform',
                       config.deduplicate ? 'translate-x-6' : 'translate-x-0.5'
                     )} />
                   </button>
@@ -794,18 +794,18 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-white">包含自定义数据</p>
-                    <p className="text-xs text-gray-500">导出手动添加的自定义对话数据</p>
+                    <p className="text-sm text-ink">包含自定义数据</p>
+                    <p className="text-xs text-ink-subtle">导出手动添加的自定义对话数据</p>
                   </div>
                   <button
                     onClick={() => setConfig(prev => ({ ...prev, include_custom: !prev.include_custom }))}
                     className={cn(
                       'w-12 h-6 rounded-full transition-colors relative',
-                      config.include_custom ? 'bg-blue-500' : 'bg-dark-500'
+                      config.include_custom ? 'bg-iris' : 'bg-line-strong'
                     )}
                   >
                     <div className={cn(
-                      'w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform',
+                      'w-5 h-5 rounded-full bg-ink absolute top-0.5 transition-transform',
                       config.include_custom ? 'translate-x-6' : 'translate-x-0.5'
                     )} />
                   </button>
@@ -814,19 +814,19 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
             </section>
 
             {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
+              <div className="p-4 bg-bad/10 border border-bad/30 rounded-xl text-bad text-sm">
                 {error}
               </div>
             )}
 
             {/* TOS 上传成功提示 */}
             {tosResult && tosResult.success && (
-              <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-start gap-3">
-                <Cloud size={18} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+              <div className="p-4 bg-ok/10 border border-ok/30 rounded-xl flex items-start gap-3">
+                <Cloud size={18} className="text-ok mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-emerald-400 text-sm font-medium">已同步上传到 TOS 对象存储</p>
-                  <p className="text-gray-500 text-xs mt-1 font-mono break-all">{tosResult.key}</p>
-                  <p className="text-gray-600 text-xs mt-1">火山引擎知识库可直接导入此文件</p>
+                  <p className="text-ok text-sm font-medium">已同步上传到 TOS 对象存储</p>
+                  <p className="text-ink-subtle text-xs mt-1 font-mono break-all">{tosResult.key}</p>
+                  <p className="text-ink-subtle text-xs mt-1">火山引擎知识库可直接导入此文件</p>
                 </div>
               </div>
             )}
@@ -836,7 +836,7 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
               <button
                 onClick={handlePreview}
                 disabled={loading}
-                className="flex-1 py-3 px-4 bg-dark-600 hover:bg-dark-500 text-white rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 py-3 px-4 bg-line hover:bg-line-strong text-ink rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {loading ? (
                   <Loader2 size={18} className="animate-spin" />
@@ -848,7 +848,7 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
               <button
                 onClick={handleExport}
                 disabled={exporting}
-                className="flex-1 py-3 px-4 bg-accent-primary hover:bg-accent-secondary text-white rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 py-3 px-4 bg-iris hover:bg-flare text-ink rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {exporting ? (
                   <Loader2 size={18} className="animate-spin" />
@@ -864,7 +864,7 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
           <div className="max-w-4xl mx-auto">
             <button
               onClick={() => setStep('config')}
-              className="mb-4 text-sm text-gray-400 hover:text-white transition-colors"
+              className="mb-4 text-sm text-ink-muted hover:text-ink transition-colors"
             >
               ← 返回配置
             </button>
@@ -873,11 +873,11 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
               <>
                 {/* 空数据提示 */}
                 {preview.statistics.total === 0 && (
-                  <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-                    <p className="text-yellow-400 text-sm">
+                  <div className="mb-6 p-4 bg-warn/10 border border-warn/30 rounded-xl">
+                    <p className="text-warn text-sm">
                       {preview.statistics.message || '没有找到符合条件的训练数据。'}
                     </p>
-                    <p className="text-gray-500 text-xs mt-2">
+                    <p className="text-ink-subtle text-xs mt-2">
                       建议：降低"最低质量要求"到"低质量"，或取消分类筛选后重试。
                     </p>
                   </div>
@@ -892,31 +892,31 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
 
                 {/* 蒸馏统计 */}
                 {preview.statistics.distill && (
-                  <div className="bg-dark-700 rounded-xl p-4 mb-6">
-                    <h4 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                      <Sparkles size={14} className="text-blue-400" />
+                  <div className="bg-panel-2 rounded-xl p-4 mb-6">
+                    <h4 className="text-sm font-medium text-ink mb-3 flex items-center gap-2">
+                      <Sparkles size={14} className="text-info" />
                       知识蒸馏统计
                     </h4>
                     <div className="grid grid-cols-5 gap-2">
-                      <div className="bg-dark-600 rounded-lg p-2 text-center">
-                        <p className="text-white font-bold text-sm">{preview.statistics.distill.input}</p>
-                        <p className="text-xs text-gray-500">输入</p>
+                      <div className="bg-line rounded-lg p-2 text-center">
+                        <p className="text-ink font-bold text-sm">{preview.statistics.distill.input}</p>
+                        <p className="text-xs text-ink-subtle">输入</p>
                       </div>
-                      <div className="bg-dark-600 rounded-lg p-2 text-center">
-                        <p className="text-blue-400 font-bold text-sm">{preview.statistics.distill.groups}</p>
-                        <p className="text-xs text-gray-500">分组</p>
+                      <div className="bg-line rounded-lg p-2 text-center">
+                        <p className="text-info font-bold text-sm">{preview.statistics.distill.groups}</p>
+                        <p className="text-xs text-ink-subtle">分组</p>
                       </div>
-                      <div className="bg-dark-600 rounded-lg p-2 text-center">
-                        <p className="text-green-400 font-bold text-sm">{preview.statistics.distill.distilled}</p>
-                        <p className="text-xs text-gray-500">蒸馏</p>
+                      <div className="bg-line rounded-lg p-2 text-center">
+                        <p className="text-ok font-bold text-sm">{preview.statistics.distill.distilled}</p>
+                        <p className="text-xs text-ink-subtle">蒸馏</p>
                       </div>
-                      <div className="bg-dark-600 rounded-lg p-2 text-center">
-                        <p className="text-purple-400 font-bold text-sm">{preview.statistics.distill.manual_entries}</p>
-                        <p className="text-xs text-gray-500">手写</p>
+                      <div className="bg-line rounded-lg p-2 text-center">
+                        <p className="text-iris font-bold text-sm">{preview.statistics.distill.manual_entries}</p>
+                        <p className="text-xs text-ink-subtle">手写</p>
                       </div>
-                      <div className="bg-dark-600 rounded-lg p-2 text-center">
-                        <p className="text-emerald-400 font-bold text-sm">{preview.statistics.distill.output}</p>
-                        <p className="text-xs text-gray-500">输出</p>
+                      <div className="bg-line rounded-lg p-2 text-center">
+                        <p className="text-ok font-bold text-sm">{preview.statistics.distill.output}</p>
+                        <p className="text-xs text-ink-subtle">输出</p>
                       </div>
                     </div>
                   </div>
@@ -924,54 +924,54 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
 
                 {/* RAG 质量分析 */}
                 {preview.statistics.rag_quality && (
-                  <div className="bg-dark-700 rounded-xl p-4 mb-6">
-                    <h4 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                      <Sparkles size={14} className="text-emerald-400" />
+                  <div className="bg-panel-2 rounded-xl p-4 mb-6">
+                    <h4 className="text-sm font-medium text-ink mb-3 flex items-center gap-2">
+                      <Sparkles size={14} className="text-ok" />
                       RAG 质量分析
                     </h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-gray-500 mb-2">内容形态</p>
+                        <p className="text-xs text-ink-subtle mb-2">内容形态</p>
                         <div className="space-y-1">
                           {Object.entries(preview.statistics.rag_quality.by_content_type || {}).map(([key, val]) => (
                             <div key={key} className="flex items-center justify-between text-xs">
                               <span className={cn(
-                                key === 'knowledge' ? 'text-green-400' :
-                                key === 'script' ? 'text-yellow-400' : 'text-gray-500'
+                                key === 'knowledge' ? 'text-ok' :
+                                key === 'script' ? 'text-warn' : 'text-ink-subtle'
                               )}>{key}</span>
-                              <span className="text-white">{val as number}</span>
+                              <span className="text-ink">{val as number}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-2">置信度分桶</p>
+                        <p className="text-xs text-ink-subtle mb-2">置信度分桶</p>
                         <div className="space-y-1">
                           {Object.entries(preview.statistics.rag_quality.by_confidence || {}).map(([key, val]) => (
                             <div key={key} className="flex items-center justify-between text-xs">
-                              <span className="text-gray-400">{key}</span>
-                              <span className="text-white">{val as number}</span>
+                              <span className="text-ink-muted">{key}</span>
+                              <span className="text-ink">{val as number}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-dark-500 flex gap-4 text-xs">
-                      <span className="text-gray-400">Source覆盖: <span className="text-white">{preview.statistics.rag_quality.source_coverage}</span></span>
-                      <span className="text-gray-400">Tags覆盖: <span className="text-white">{preview.statistics.rag_quality.tags_coverage}</span></span>
+                    <div className="mt-3 pt-3 border-t border-line-strong flex gap-4 text-xs">
+                      <span className="text-ink-muted">Source覆盖: <span className="text-ink">{preview.statistics.rag_quality.source_coverage}</span></span>
+                      <span className="text-ink-muted">Tags覆盖: <span className="text-ink">{preview.statistics.rag_quality.tags_coverage}</span></span>
                     </div>
                   </div>
                 )}
 
                 {/* 类别分布 */}
                 {preview.statistics.by_category && Object.keys(preview.statistics.by_category).length > 0 && (
-                  <div className="bg-dark-700 rounded-xl p-4 mb-6">
-                    <h4 className="text-sm font-medium text-gray-300 mb-3">类别分布</h4>
+                  <div className="bg-panel-2 rounded-xl p-4 mb-6">
+                    <h4 className="text-sm font-medium text-ink mb-3">类别分布</h4>
                     <div className="space-y-2">
                       {Object.entries(preview.statistics.by_category).map(([key, value]) => (
                         <div key={key} className="flex items-center justify-between text-sm">
-                          <span className="text-gray-400">{CATEGORIES.find(c => c.id === key)?.name || key}</span>
-                          <span className="text-white">{value}</span>
+                          <span className="text-ink-muted">{CATEGORIES.find(c => c.id === key)?.name || key}</span>
+                          <span className="text-ink">{value}</span>
                         </div>
                       ))}
                     </div>
@@ -979,35 +979,35 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                 )}
 
                 {/* 样本预览 */}
-                <div className="bg-dark-700 rounded-xl p-4">
-                  <h4 className="text-sm font-medium text-gray-300 mb-3">样本预览</h4>
+                <div className="bg-panel-2 rounded-xl p-4">
+                  <h4 className="text-sm font-medium text-ink mb-3">样本预览</h4>
                   <div className="space-y-4 max-h-96 overflow-y-auto">
                     {preview.preview.map((item, index) => (
-                      <div key={index} className="bg-dark-600 rounded-lg p-3 text-sm">
+                      <div key={index} className="bg-line rounded-lg p-3 text-sm">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="px-2 py-0.5 bg-accent-primary/20 text-accent-primary rounded text-xs">
+                          <span className="px-2 py-0.5 bg-iris/20 text-iris rounded text-xs">
                             {item.category || 'unknown'}
                           </span>
                           {item.content_type && (
                             <span className={cn(
                               'px-2 py-0.5 rounded text-xs',
-                              item.content_type === 'knowledge' ? 'bg-green-500/20 text-green-400' :
-                              item.content_type === 'script' ? 'bg-yellow-500/20 text-yellow-400' :
-                              'bg-gray-500/20 text-gray-400'
+                              item.content_type === 'knowledge' ? 'bg-ok/20 text-ok' :
+                              item.content_type === 'script' ? 'bg-warn/20 text-warn' :
+                              'bg-panel-2/20 text-ink-muted'
                             )}>
                               {item.content_type}
                             </span>
                           )}
                           {item.confidence && (
-                            <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
+                            <span className="px-2 py-0.5 bg-iris/20 text-info rounded text-xs">
                               {item.confidence}
                             </span>
                           )}
-                          <span className="px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">
+                          <span className="px-2 py-0.5 bg-ok/20 text-ok rounded text-xs">
                             {item.quality || 'medium'}
                           </span>
                         </div>
-                        <pre className="text-gray-300 whitespace-pre-wrap text-xs overflow-x-auto">
+                        <pre className="text-ink whitespace-pre-wrap text-xs overflow-x-auto">
                           {JSON.stringify(item.question ? { question: item.question, answer: item.answer, category: item.category } : item.conversations?.slice(0, 3) || item, null, 2)}
                         </pre>
                       </div>
@@ -1020,7 +1020,7 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
                   <button
                     onClick={handleExport}
                     disabled={exporting}
-                    className="w-full py-4 bg-accent-primary hover:bg-accent-secondary text-white rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 text-lg font-medium"
+                    className="w-full py-4 bg-iris hover:bg-flare text-ink rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 text-lg font-medium"
                   >
                     {exporting ? (
                       <Loader2 size={20} className="animate-spin" />
@@ -1045,9 +1045,9 @@ export default function ExportView({ onClose, embedded = false }: ExportViewProp
 
 function StatCard({ label, value, suffix = '' }: { label: string; value: number | string; suffix?: string }) {
   return (
-    <div className="bg-dark-700 rounded-xl p-4 text-center">
-      <p className="text-2xl font-bold text-white">{value}{suffix}</p>
-      <p className="text-xs text-gray-500 mt-1">{label}</p>
+    <div className="bg-panel-2 rounded-xl p-4 text-center">
+      <p className="text-2xl font-bold text-ink">{value}{suffix}</p>
+      <p className="text-xs text-ink-subtle mt-1">{label}</p>
     </div>
   )
 }
