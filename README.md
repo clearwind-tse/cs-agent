@@ -74,9 +74,13 @@
 
 ## 界面预览
 
-> 截图为本地运行画面，对话与数据均为演示数据。
+> 截图为本地运行画面，采用「流体极光」视觉主题与三工作区信息架构（在线服务 / 数据治理 / 模型优化）；对话与数据均为演示数据。
 
-**智能客服工作台** —— 意图识别、工具调用、退款挂起待审批
+**全局数据看板** —— 跨工作区汇总 KPI、数据闭环健康度与图表，一眼掌握全局（顶部「全局总览」入口）
+
+![全局数据看板](docs/screenshots/overview.png)
+
+**智能客服工作台** —— 意图识别、工具调用、退款挂起待审批（位于「01 在线服务」工作区）
 
 ![智能客服对话](docs/screenshots/agent-chat.png)
 
@@ -92,7 +96,7 @@
 ![Skill & MCP](docs/screenshots/agent-skill.png)
 ![Agent 配置](docs/screenshots/agent-config.png)
 
-**数据质检中心**：清洗审核 → 质检评分 → 校准对比
+**数据质检中心**：清洗审核 → 质检评分 → 校准对比（「02 数据治理」工作区）
 
 ![会话清洗与审核](docs/screenshots/qc-clean.png)
 ![质检评分](docs/screenshots/qc-score.png)
