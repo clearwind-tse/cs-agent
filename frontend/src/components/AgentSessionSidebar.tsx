@@ -12,12 +12,13 @@
 import {
   Plus, Trash2, MessageSquare, User, RefreshCw,
   Loader2, AlertCircle, X, Hash, Clock,
-  LifeBuoy, Tag, Bot, ChevronRight,
+  LifeBuoy, Tag, Bot, ChevronRight, Send, CheckCircle,
 } from 'lucide-react'
 import {
   listAgentSessions,
   createAgentSession,
   deleteAgentSession,
+  closeAgentSession,
   ticketStats,
   type AgentSessionData,
 } from '../api'
@@ -71,6 +72,7 @@ export default function AgentSessionSidebar({
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [closingId, setClosingId] = useState<string | null>(null)
   const [showNewDialog, setShowNewDialog] = useState(false)
   const [form, setForm] = useState<NewSessionForm>({
     session_id: '',
@@ -150,6 +152,20 @@ export default function AgentSessionSidebar({
       setError(e?.response?.data?.detail ?? '删除失败')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const handleClose = async (sessionId: string) => {
+    if (!window.confirm(`确认关闭会话「${sessionId}」并推送到「会话记录」？\n关闭后会自动跑 清洗→质检→知识提炼（可在后端开关）。`)) return
+    setClosingId(sessionId)
+    try {
+      await closeAgentSession(sessionId)
+      setSessions(prev => prev.map(s => s.session_id === sessionId ? { ...s, status: 'closed' } : s))
+      setError(null)
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? '关闭推送失败')
+    } finally {
+      setClosingId(null)
     }
   }
 
@@ -249,8 +265,10 @@ export default function AgentSessionSidebar({
               isSelected={selectedSession?.session_id === session.session_id}
               onClick={() => onSelectSession(session)}
               onDelete={() => handleDelete(session.session_id)}
+              onClose={() => handleClose(session.session_id)}
               onOpenTickets={onOpenSessionTickets ? () => onOpenSessionTickets(session.session_id) : undefined}
               deleting={deletingId === session.session_id}
+              closing={closingId === session.session_id}
             />
           ))
         )}
@@ -357,15 +375,19 @@ function SessionItem({
   isSelected,
   onClick,
   onDelete,
+  onClose,
   onOpenTickets,
   deleting,
+  closing,
 }: {
   session: AgentSessionData
   isSelected: boolean
   onClick: () => void
   onDelete: () => void
+  onClose?: () => void
   onOpenTickets?: () => void
   deleting: boolean
+  closing: boolean
 }) {
   const name = session.display_name || `Agent · ${session.user_id || 'anonymous'}`
   return (
@@ -418,7 +440,7 @@ function SessionItem({
             </span>
           </div>
         </div>
-        {/* 本会话工单 / 删除 */}
+        {/* 本会话工单 / 关闭推送 / 删除 */}
         {onOpenTickets && (
           <button
             onClick={(e) => { e.stopPropagation(); onOpenTickets() }}
@@ -428,6 +450,27 @@ function SessionItem({
             <LifeBuoy size={13} />
           </button>
         )}
+        {session.status === 'closed' ? (
+          <span
+            className="p-1 rounded text-good flex-shrink-0"
+            title="已关闭并推送至会话记录"
+          >
+            <CheckCircle size={13} />
+          </span>
+        ) : onClose ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onClose() }}
+            disabled={closing}
+            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-iris/20 text-ink-subtle hover:text-info transition-all flex-shrink-0"
+            title="关闭并推送到会话记录"
+          >
+            {closing ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Send size={13} />
+            )}
+          </button>
+        ) : null}
         <button
           onClick={(e) => { e.stopPropagation(); onDelete() }}
           disabled={deleting}

@@ -363,6 +363,8 @@ export async function triggerExtraction(source: string = 'both'): Promise<{
 export async function getArticles(params: {
   category?: string
   verified?: boolean
+  start_time?: number
+  end_time?: number
   skip?: number
   limit?: number
 }): Promise<KnowledgeArticleData[]> {
@@ -775,6 +777,8 @@ export async function listInspections(params: {
   status?: string
   config_id?: number
   scored?: boolean
+  start_time?: number
+  end_time?: number
   page?: number
   page_size?: number
 }): Promise<{ total: number; page: number; page_size: number; items: QcInspection[] }> {
@@ -1152,8 +1156,43 @@ export interface AgentSessionData {
   display_name: string | null
   last_message: string | null
   message_count: number
+  status?: string | null
+  closed_at?: string | null
   created_at: string | null
   updated_at: string | null
+}
+
+/** 关联档案：某会话在闭环各阶段的聚合记录 */
+export interface RelatedRecords {
+  session_id: string
+  session: Record<string, unknown> | null
+  raw: { count: number; start_time: number | null; end_time: number | null; push_source: string | null }
+  staging: { id: number; status: string; auto_category: string | null; created_at: string | null }[]
+  labeled: {
+    id: number
+    status: string
+    auto_category: string | null
+    human_category: string | null
+    auto_quality_score: number | null
+    created_at: string | null
+  }[]
+  quality_inspections: {
+    id: number
+    overall_score: number | null
+    scored: boolean
+    status: string
+    violations: number
+    created_at: string | null
+  }[]
+  knowledge_articles: {
+    id: number
+    scene: string
+    scene_category: string | null
+    confidence: number
+    is_verified: boolean
+    created_at: string | null
+  }[]
+  knowledge_chunks: { id: number; topic_summary: string | null; start_time: number | null; end_time: number | null }[]
 }
 
 export interface AgentSessionCreatePayload {
@@ -1182,6 +1221,36 @@ export async function createAgentSession(payload: AgentSessionCreatePayload): Pr
 
 export async function deleteAgentSession(sessionId: string): Promise<{ message: string }> {
   const { data } = await api.delete(`/agent/sessions/${encodeURIComponent(sessionId)}`)
+  return data
+}
+
+/** 关闭智能客服会话，并把对话整段推送进「会话记录」，可选触发自动流水线 */
+export async function closeAgentSession(sessionId: string): Promise<{
+  session_id: string
+  raw_session_id: string
+  messages_pushed: number
+  pipeline_triggered: boolean
+  message: string
+}> {
+  const { data } = await api.post(`/agent/sessions/${encodeURIComponent(sessionId)}/close`)
+  return data
+}
+
+/** 关联档案：聚合某会话在闭环各阶段的记录（原始/清洗/标注/质检/知识） */
+export async function getRelatedRecords(sessionId: string): Promise<RelatedRecords> {
+  const { data } = await api.get(`/chats/sessions/${encodeURIComponent(sessionId)}/related`)
+  return data
+}
+
+/** 手动触发某会话的 清洗→质检→知识提炼（补跑/重跑） */
+export async function runSessionPipeline(
+  sessionId: string,
+  params?: { start_time?: number; end_time?: number }
+): Promise<{ message: string; stats: Record<string, unknown> }> {
+  const { data } = await api.post(
+    `/chats/sessions/${encodeURIComponent(sessionId)}/pipeline/run`,
+    params || {}
+  )
   return data
 }
 

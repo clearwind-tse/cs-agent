@@ -7,6 +7,7 @@ export interface Session {
   last_message: string | null
   last_time: number | null
   message_count: number
+  push_source?: string | null
 }
 
 // 消息类型

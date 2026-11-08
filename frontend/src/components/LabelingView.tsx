@@ -4,6 +4,7 @@ import { cn } from '../utils'
 import axios from 'axios'
 import { useToast } from '../contexts/ToastContext'
 import ConfirmDialog from './ConfirmDialog'
+import TimeRangeFilter from './TimeRangeFilter'
 
 interface LabelingViewProps {
   onClose: () => void
@@ -66,6 +67,8 @@ export default function LabelingView({ onClose }: LabelingViewProps) {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [statusFilter, setStatusFilter] = useState('pending')
+  const [startTime, setStartTime] = useState<number | null>(null)
+  const [endTime, setEndTime] = useState<number | null>(null)
   const [editingText, setEditingText] = useState('')
   const [isEditing, setIsEditing] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -95,7 +98,13 @@ export default function LabelingView({ onClose }: LabelingViewProps) {
     setLoading(true)
     try {
       const res = await axios.get('/api/labeling/list', {
-        params: { status: statusFilter, page, page_size: 20 }
+        params: {
+          status: statusFilter,
+          page,
+          page_size: 20,
+          start_time: startTime ?? undefined,
+          end_time: endTime ?? undefined,
+        }
       })
       setItems(res.data.items)
       setTotal(res.data.total)
@@ -114,7 +123,9 @@ export default function LabelingView({ onClose }: LabelingViewProps) {
         time_window_seconds: 300,
         max_turns: 20,
         min_quality: 'low',
-        limit: 500
+        limit: 500,
+        start_time: startTime ?? undefined,
+        end_time: endTime ?? undefined,
       })
       showSuccess(`清洗完成！新增 ${res.data.created} 条待标注数据`)
       loadStats()
@@ -187,7 +198,7 @@ export default function LabelingView({ onClose }: LabelingViewProps) {
   useEffect(() => {
     loadStats()
     loadItems()
-  }, [statusFilter, page])
+  }, [statusFilter, page, startTime, endTime])
 
   useEffect(() => {
     if (currentItem) {
@@ -291,6 +302,15 @@ export default function LabelingView({ onClose }: LabelingViewProps) {
                 {STATUS_LABELS[s].name}
               </button>
             ))}
+          </div>
+
+          {/* 时间筛选（按标注记录创建时间） */}
+          <div className="p-3 border-b border-line">
+            <TimeRangeFilter
+              startTime={startTime}
+              endTime={endTime}
+              onChange={(s, e) => { setStartTime(s ?? null); setEndTime(e ?? null); setPage(1) }}
+            />
           </div>
 
           {/* 批量操作 */}

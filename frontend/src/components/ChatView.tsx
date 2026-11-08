@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { Users, MoreVertical, ChevronUp, ArrowDown, Play, Square } from 'lucide-react'
-import { getChatHistory, getMessageContext } from '../api'
+import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from 'react'
+import { Users, MoreVertical, ChevronUp, ArrowDown, Play, Square, Link2, X, Loader2, RefreshCw } from 'lucide-react'
+import { getChatHistory, getMessageContext, getRelatedRecords, runSessionPipeline } from '../api'
+import type { RelatedRecords } from '../api'
 import { Session, Message, MSG_TYPES } from '../types'
 import { cn, formatTime, formatDateTime, getAvatarColor, getInitials, getMsgTypeLabel } from '../utils'
 import { calculateTargetScrollTop, shouldAutoLoadMoreOnScroll } from './chatPositioning'
@@ -26,6 +27,47 @@ export default function ChatView({ session, targetMessageId, onTargetReached }: 
   // 用于追踪当前激活的会话ID，解决快速切换会话时的竞态问题
   const sessionRef = useRef(session.session_id)
   const highlightTimerRef = useRef<number | null>(null)
+
+  // 关联档案抽屉
+  const [showRelated, setShowRelated] = useState(false)
+  const [related, setRelated] = useState<RelatedRecords | null>(null)
+  const [relatedLoading, setRelatedLoading] = useState(false)
+  const [relatedError, setRelatedError] = useState<string | null>(null)
+  const [running, setRunning] = useState(false)
+
+  const loadRelated = useCallback(async () => {
+    setRelatedLoading(true)
+    setRelatedError(null)
+    try {
+      const data = await getRelatedRecords(session.session_id)
+      setRelated(data)
+    } catch (e: any) {
+      setRelatedError(e?.response?.data?.detail ?? '加载关联档案失败')
+    } finally {
+      setRelatedLoading(false)
+    }
+  }, [session.session_id])
+
+  const toggleRelated = () => {
+    if (!showRelated) {
+      setShowRelated(true)
+      loadRelated()
+    } else {
+      setShowRelated(false)
+    }
+  }
+
+  const handleRunPipeline = async () => {
+    setRunning(true)
+    try {
+      await runSessionPipeline(session.session_id)
+      await loadRelated()
+    } catch (e: any) {
+      setRelatedError(e?.response?.data?.detail ?? '触发失败')
+    } finally {
+      setRunning(false)
+    }
+  }
 
   useEffect(() => {
     sessionRef.current = session.session_id
@@ -191,7 +233,7 @@ export default function ChatView({ session, targetMessageId, onTargetReached }: 
   const displayName = sessionLabel(session.display_name, session.session_id)
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <div className="flex-1 flex flex-col h-full overflow-hidden relative">
       {/* 头部 */}
       <header className="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-line bg-panel/80 backdrop-blur-sm flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -209,9 +251,24 @@ export default function ChatView({ session, targetMessageId, onTargetReached }: 
             </p>
           </div>
         </div>
-        <button className="p-2 rounded-lg hover:bg-line text-ink-muted hover:text-ink transition-colors flex-shrink-0">
-          <MoreVertical size={18} />
-        </button>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={toggleRelated}
+            className={cn(
+              'px-2.5 py-1.5 rounded-lg text-xs border transition-colors flex items-center gap-1',
+              showRelated
+                ? 'bg-iris/15 text-info border-iris/25'
+                : 'text-ink-muted hover:text-ink hover:bg-panel-2 border-transparent'
+            )}
+            title="查看本会话的关联档案（清洗/质检/知识）"
+          >
+            <Link2 size={14} />
+            关联档案
+          </button>
+          <button className="p-2 rounded-lg hover:bg-line text-ink-muted hover:text-ink transition-colors">
+            <MoreVertical size={18} />
+          </button>
+        </div>
       </header>
 
       {/* 消息列表 */}
@@ -277,8 +334,141 @@ export default function ChatView({ session, targetMessageId, onTargetReached }: 
           <ArrowDown size={18} />
         </button>
       )}
+
+      {/* 关联档案抽屉 */}
+      {showRelated && (
+        <RelatedDrawer
+          related={related}
+          loading={relatedLoading}
+          error={relatedError}
+          running={running}
+          sessionId={session.session_id}
+          onClose={() => setShowRelated(false)}
+          onRerun={handleRunPipeline}
+        />
+      )}
     </div>
   )
+}
+
+function fmtTs(ts: number | null): string {
+  if (!ts) return '-'
+  return formatDateTime(ts)
+}
+
+function RelatedDrawer({
+  related,
+  loading,
+  error,
+  running,
+  sessionId,
+  onClose,
+  onRerun,
+}: {
+  related: RelatedRecords | null
+  loading: boolean
+  error: string | null
+  running: boolean
+  sessionId: string
+  onClose: () => void
+  onRerun: () => void
+}) {
+  return (
+    <div className="absolute top-0 right-0 bottom-0 w-[360px] max-w-[90%] bg-panel border-l border-line shadow-xl flex flex-col z-30 animate-fade-in">
+      <div className="h-16 px-4 flex items-center justify-between border-b border-line flex-shrink-0">
+        <div className="min-w-0">
+          <h3 className="text-sm font-medium text-ink">关联档案</h3>
+          <p className="text-[11px] text-ink-subtle truncate">{sessionId}</p>
+        </div>
+        <button onClick={onClose} className="p-1.5 rounded hover:bg-line text-ink-muted hover:text-ink">
+          <X size={16} />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {loading && <p className="text-sm text-ink-subtle">加载中...</p>}
+        {error && <p className="text-sm text-bad">{error}</p>}
+        {related && (
+          <>
+            <Section title="原始会话记录" badge={related.raw.count}>
+              <Row text={`来源：${related.raw.push_source ?? 'wx_etl'}`} />
+              <Row text={`时间跨度：${fmtTs(related.raw.start_time)} ~ ${fmtTs(related.raw.end_time)}`} />
+            </Section>
+            <Section title="清洗（暂存）" badge={related.staging.length}>
+              {related.staging.map((s) => (
+                <Row key={s.id} text={`#${s.id}`} sub={`${s.auto_category ?? ''} · ${s.status}`} />
+              ))}
+              {related.staging.length === 0 && <Empty />}
+            </Section>
+            <Section title="标注（待审/已审）" badge={related.labeled.length}>
+              {related.labeled.map((l) => (
+                <Row
+                  key={l.id}
+                  text={`#${l.id}`}
+                  sub={`${l.auto_category ?? l.human_category ?? ''} · ${l.status} · ${l.auto_quality_score ?? '-'}`}
+                />
+              ))}
+              {related.labeled.length === 0 && <Empty />}
+            </Section>
+            <Section title="质检" badge={related.quality_inspections.length}>
+              {related.quality_inspections.map((q) => (
+                <Row
+                  key={q.id}
+                  text={`#${q.id}`}
+                  sub={`${q.overall_score ?? '-'} 分 · ${q.violations} 违规 · ${q.status}`}
+                />
+              ))}
+              {related.quality_inspections.length === 0 && <Empty />}
+            </Section>
+            <Section title="知识提炼" badge={related.knowledge_articles.length}>
+              {related.knowledge_articles.map((a) => (
+                <Row
+                  key={a.id}
+                  text={a.scene}
+                  sub={`${a.scene_category ?? ''} · 置信度 ${a.confidence} · ${a.is_verified ? '已验证' : '未验证'}`}
+                />
+              ))}
+              {related.knowledge_articles.length === 0 && <Empty />}
+            </Section>
+          </>
+        )}
+      </div>
+      <div className="p-3 border-t border-line flex-shrink-0">
+        <button
+          onClick={onRerun}
+          disabled={running}
+          className="w-full px-3 py-2 text-sm bg-iris hover:bg-flare text-ink rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+        >
+          {running ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+          运行流水线（清洗→质检→知识）
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function Section({ title, badge, children }: { title: string; badge: number; children: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-line bg-panel-2/40 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-medium text-ink-muted">{title}</h4>
+        <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-iris/15 text-info">{badge}</span>
+      </div>
+      <div className="space-y-1">{children}</div>
+    </div>
+  )
+}
+
+function Row({ text, sub }: { text: string; sub?: string }) {
+  return (
+    <div className="text-xs text-ink truncate">
+      <span>{text}</span>
+      {sub && <span className="text-ink-subtle ml-1">· {sub}</span>}
+    </div>
+  )
+}
+
+function Empty() {
+  return <p className="text-[11px] text-ink-subtle">暂无</p>
 }
 
 // 判断是否需要显示日期分隔

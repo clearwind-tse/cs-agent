@@ -5,6 +5,7 @@ import { StatCard, ChartFrame, StatusDonut, CategoryBars, toChartData } from './
 import { cn } from '../utils'
 import { useToast } from '../contexts/ToastContext'
 import ConfirmDialog from './ConfirmDialog'
+import TimeRangeFilter from './TimeRangeFilter'
 import {
   triggerExtraction,
   getArticles,
@@ -35,6 +36,8 @@ export default function ExtractorView() {
   const [loading, setLoading] = useState(false)
   const [filterCategory, setFilterCategory] = useState<string>('')
   const [filterVerified, setFilterVerified] = useState<boolean | null>(null)
+  const [startTime, setStartTime] = useState<number | null>(null)
+  const [endTime, setEndTime] = useState<number | null>(null)
   
   // 提取弹窗状态
   const [showExtractDialog, setShowExtractDialog] = useState(false)
@@ -72,7 +75,7 @@ export default function ExtractorView() {
 
   useEffect(() => {
     loadData()
-  }, [filterCategory, filterVerified])
+  }, [filterCategory, filterVerified, startTime, endTime])
 
   const loadData = async () => {
     setLoading(true)
@@ -81,6 +84,8 @@ export default function ExtractorView() {
         getArticles({
           category: filterCategory || undefined,
           verified: filterVerified !== null ? filterVerified : undefined,
+          start_time: startTime ?? undefined,
+          end_time: endTime ?? undefined,
           limit: 100 // 默认加载100条
         }),
         getExtractorStats()
@@ -290,6 +295,12 @@ export default function ExtractorView() {
           <option value="true">已验证</option>
           <option value="false">未验证</option>
         </select>
+
+        <TimeRangeFilter
+          startTime={startTime}
+          endTime={endTime}
+          onChange={(s, e) => { setStartTime(s ?? null); setEndTime(e ?? null) }}
+        />
 
         <div className="flex-1" />
 

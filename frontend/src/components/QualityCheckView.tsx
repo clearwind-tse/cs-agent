@@ -12,6 +12,7 @@ import {
 } from '../api'
 import { cn } from '../utils'
 import { maskSessionId } from '../sessionDisplay'
+import TimeRangeFilter from './TimeRangeFilter'
 import {
   StatCard as AuroraStatCard,
   ChartFrame,
@@ -64,7 +65,7 @@ export default function QualityCheckView({ embedded = false }: QualityCheckViewP
   const [items, setItems] = useState<QcInspection[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [filters, setFilters] = useState<{ status?: string; min_score?: number; violation_type?: string }>({})
+  const [filters, setFilters] = useState<{ status?: string; min_score?: number; violation_type?: string; start_time?: number; end_time?: number }>({})
   const [sessionInput, setSessionInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -100,6 +101,8 @@ export default function QualityCheckView({ embedded = false }: QualityCheckViewP
         status: filters.status,
         min_score: filters.min_score,
         violation_type: filters.violation_type,
+        start_time: filters.start_time,
+        end_time: filters.end_time,
       })
       setItems(res.items)
       setTotal(res.total)
@@ -206,6 +209,10 @@ export default function QualityCheckView({ embedded = false }: QualityCheckViewP
           onOpenDetail={handleOpenDetail}
           onPage={(p: number) => loadInspections(p)}
           onRefresh={() => loadInspections(page)}
+          onTimeChange={(s?: number, e?: number) => {
+            setFilters((f) => ({ ...f, start_time: s, end_time: e }))
+            loadInspections(1)
+          }}
         />
       ) : tab === 'insights' ? (
         <InsightsTab feedback={feedback} onOpenDetail={handleOpenDetail} onRefresh={loadFeedback} />
@@ -250,7 +257,7 @@ function ResultsTab(props: any) {
   const {
     stats, items, total, page, loading, filters, setFilters,
     sessionInput, setSessionInput,
-    onInspect, onBatch, onOpenDetail, onPage, onRefresh,
+    onInspect, onBatch, onOpenDetail, onPage, onRefresh, onTimeChange,
   } = props
 
   return (
@@ -349,6 +356,13 @@ function ResultsTab(props: any) {
         />
         <button onClick={onRefresh} className="px-2 py-1 text-ink-muted hover:text-ink">应用</button>
       </div>
+
+      {/* 时间筛选 */}
+      <TimeRangeFilter
+        startTime={filters.start_time}
+        endTime={filters.end_time}
+        onChange={(s, e) => onTimeChange?.(s, e)}
+      />
 
       {/* List */}
       {loading && items.length === 0 ? (
