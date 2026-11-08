@@ -679,6 +679,7 @@ def close_agent_session(
     推送后若开启 AUTO_PIPELINE_ON_PUSH，自动在后台跑 清洗→质检→知识提炼。
     """
     from datetime import timezone
+    from sqlalchemy import text
     from app.models.chat import Session as ChatSession, RawChat
     from app.services.pipeline_service import run_pipeline
 
