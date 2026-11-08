@@ -361,14 +361,33 @@ class SkillTool(BaseTool):
             content = content[:MAX_LEN]
             truncated = True
         note = "（内容已截断，仅展示前段；如需特定步骤请明确说明）" if truncated else ""
-        # 返回技能内容 + 简短摘要，供 LLM 做意图匹配
+
+        # 【内外部分层】技能返回的是「内部处置手册」，只供 Agent 推理，绝不进入发送体。
+        # 之前直接把 skill_content 明文返回，模型会原样/分节粘贴给客户，造成 SOP 泄露。
+        # 现在把手册包裹进 internal_only 信封，并用 output_contract 明确要求 Agent
+        # 单独生成 customer_message（面向客户的自然语言结论）。
+        internal_manual = (
+            "【内部处置手册·严禁外发】以下内容仅供你推理与决策参考。"
+            "禁止把原文、整段、分节标题、分级定性、升级阈值、内部工具名或任何内部字段"
+            "复述给客户。请先按手册判断需要哪些事实（订单号/商品/问题），用工具核实后，"
+            "只输出一段 2-4 句、面向客户的自然语言回复。\n\n"
+            + content + note
+        )
         return {
             "success": True,
             "data": {
                 "skill_id": self.skill_id,
                 "skill_name": self.tool_name,
                 "query_hint": query,
-                "skill_content": content + note,
+                "usage": "internal_only",
+                "internal_manual": internal_manual,
+                # 由 Agent 生成；禁止把 internal_manual 填到这里
+                "customer_message": None,
+                "output_contract": (
+                    "internal_manual 仅供推理，绝不外发。customer_message 由你生成，"
+                    "只写面向客户的自然语言结论（2-4 句），不得包含 SOP、P0-P3 分级、"
+                    "升级阈值、内部工具名、「话术要点」「避免」等内部内容。"
+                ),
             },
             "error": None,
         }

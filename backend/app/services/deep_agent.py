@@ -34,7 +34,7 @@ from deepagents.middleware.filesystem import FilesystemMiddleware
 
 from app.services import dialog_state, order_store
 from app.services.agent_registry import get_agent_registry
-from app.services.xiaocan_persona import BUSINESS_CONTEXT, FORBIDDEN_TOPICS
+from app.services.benpingtai_persona import BUSINESS_CONTEXT, FORBIDDEN_TOPICS
 from app.models.agent_config import AgentConfig
 
 # 复用 LangGraph 版的「prompt 规则 / 质量闸门 / 落盘 / 建单」实现——
@@ -43,6 +43,7 @@ from app.services.langgraph_agent import (
     _build_system_prompt,
     _build_tool_context,
     _collect_tools,
+    _contains_internal_leak,
     _evaluate_transfer,
     _load_agent_config,
     _maybe_auto_ticket,
@@ -231,7 +232,7 @@ def _lc_structured_tool(fn, **kwargs):
 
 def _subagent_prompt(agent, desc: str) -> str:
     return (
-        f"你是「小蚕惠生活」的客服子代理「{agent.name}」。\n"
+        f"你是「本平台」的客服子代理「{agent.name}」。\n"
         f"职责：{desc or agent.name}\n\n"
         f"## 业务事实（不得超出范围承诺）\n{BUSINESS_CONTEXT}\n"
         f"不属于本平台：{FORBIDDEN_TOPICS}\n\n"
@@ -614,6 +615,7 @@ class DeepAgentCustomerAgent:
             called_tools: List[str] = []
             final_messages = None
             full_answer = ""
+            suppress_tokens = False
             async for ev in graph.astream_events({"messages": messages}, config, version="v2"):
                 ev_type = ev.get("event")
                 if ev_type == "on_chat_model_stream":
@@ -621,7 +623,11 @@ class DeepAgentCustomerAgent:
                     if content:
                         streamed_any = True
                         full_answer += content
-                        yield {"type": "token", "content": content}
+                        if not suppress_tokens and _contains_internal_leak(full_answer):
+                            suppress_tokens = True
+                            print("[DeepAgent] 流式检出内部内容外泄，已停止继续下发")
+                        if not suppress_tokens:
+                            yield {"type": "token", "content": content}
                 elif ev_type == "on_tool_end":
                     name = (ev.get("data") or {}).get("name")
                     if name:
@@ -745,7 +751,7 @@ class DeepAgentCustomerAgent:
             # aget_tuple/put，而同步 PostgresSaver 未实现异步方法（NotImplementedError）。
             # 正常对话无需图级暂停/恢复；HITL 中断会由非流式回退路径（带同步 checkpointer）处理。
             checkpointer=None if async_mode else get_checkpointer(),
-            name=f"xiaocan_cs_{agent_id or 'default'}",
+            name=f"benpingtai_cs_{agent_id or 'default'}",
         )
 
     @staticmethod
@@ -956,6 +962,9 @@ class DeepAgentCustomerAgent:
         value, interrupts = _split_result(result)
         out = value.get("messages", [])
         answer = _last_ai_text(out)
+        if answer:
+            # 续跑话术同样要过「内部内容外泄」过滤，避免审批后再次泄出 SOP
+            answer = _sanitize_answer(answer, state)
         tools = _tool_names_called(out)
 
         # 真实受理号只从「工具返回 / 退款仓」取，不信模型自述
@@ -1050,6 +1059,8 @@ class DeepAgentCustomerAgent:
             "- 属于你职责域的，直接调用工具处理，不要为了走流程而委派。\n"
             "- 多步任务可先用 write_todos 列计划（同一轮内完成，不要向客户播报内部计划）。\n"
             "- 不要把内部工具名、状态字段、计划文本直接展示给客户。\n"
+            "- 技能（Skill）返回的是内部处置手册：禁止原文/分节复制给客户，"
+            "也不要把 SOP 分级、升级阈值、内部工具名写进回复，只给一句自然语言结论。\n"
         )
 
 

@@ -4,10 +4,11 @@
 
 提供子Agent的注册、查询、更新接口
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.orm import Session as DBSession
 from typing import Dict, List, Optional
 from pydantic import BaseModel
+from datetime import datetime
 import json
 
 from app.models.database import get_db
@@ -15,7 +16,10 @@ from app.models.agent_config import AgentConfig, AgentSession
 from app.services.agent_registry import get_agent_registry
 from app.services.agent_engine import get_customer_agent, current_engine
 from app.services.intent_recognition import IntentRecognitionService
+from app.config import get_settings
 from sqlalchemy import text as sql_text
+
+settings = get_settings()
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
 
@@ -662,6 +666,135 @@ def update_agent_session(
         {"sid": session_id},
     ).fetchone()
     return dict(row._mapping)
+
+
+@router.post("/sessions/{session_id}/close")
+def close_agent_session(
+    session_id: str,
+    background_tasks: BackgroundTasks,
+    db: DBSession = Depends(get_db),
+):
+    """
+    关闭智能客服会话，并把对话整段推送进「会话记录」(raw_chats)，标注来源。
+    推送后若开启 AUTO_PIPELINE_ON_PUSH，自动在后台跑 清洗→质检→知识提炼。
+    """
+    from datetime import timezone
+    from app.models.chat import Session as ChatSession, RawChat
+    from app.services.pipeline_service import run_pipeline
+
+    row = db.execute(
+        text("SELECT * FROM agent_sessions WHERE session_id = :sid"),
+        {"sid": session_id},
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    sess = dict(row._mapping)
+    if sess.get("status") == "closed":
+        raise HTTPException(status_code=400, detail="会话已关闭")
+
+    msgs = db.execute(
+        text(
+            "SELECT turn_number, role, content, created_at "
+            "FROM agent_messages WHERE session_id = :sid ORDER BY turn_number ASC"
+        ),
+        {"sid": session_id},
+    ).fetchall()
+
+    raw_session_id = f"agent:{session_id}"
+
+    def _to_ts(dt):
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return int(dt.timestamp())
+
+    pushed = 0
+    # 幂等：已推送过则跳过重复写入
+    already = db.execute(
+        text("SELECT 1 FROM sessions WHERE session_id = :sid"),
+        {"sid": raw_session_id},
+    ).fetchone()
+    if not already and msgs:
+        times = [t for t in (_to_ts(m.created_at) for m in msgs) if t is not None]
+        start_ts = min(times) if times else int(datetime.utcnow().timestamp())
+        end_ts = max(times) if times else start_ts
+
+        db.execute(
+            text(
+                "INSERT INTO sessions "
+                "(session_id, display_name, is_chatroom, last_message, last_time, "
+                " message_count, push_source, created_at, updated_at) "
+                "VALUES (:sid, :name, FALSE, :last, :last_time, :cnt, "
+                " 'agent_service', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            ),
+            {
+                "sid": raw_session_id,
+                "name": sess.get("display_name") or f"智能客服会话 {session_id}",
+                "last": (msgs[-1].content or "")[:500],
+                "last_time": end_ts,
+                "cnt": len(msgs),
+            },
+        )
+        for m in msgs:
+            db.execute(
+                text(
+                    "INSERT INTO raw_chats "
+                    "(session_id, sender_wxid, sender_name, content, msg_type, "
+                    " is_sender, timestamp, push_source, source_db, created_at) "
+                    "VALUES (:sid, :wxid, :name, :content, 1, :is_sender, :ts, "
+                    " 'agent_service', 'agent_service', CURRENT_TIMESTAMP)"
+                ),
+                {
+                    "sid": raw_session_id,
+                    "wxid": m.role,
+                    "name": "智能客服" if m.role == "assistant" else "客户",
+                    "content": m.content or "",
+                    "is_sender": m.role == "assistant",
+                    "ts": _to_ts(m.created_at) or start_ts,
+                },
+            )
+            pushed += 1
+
+        db.execute(
+            text(
+                "UPDATE agent_sessions SET status='closed', closed_at=CURRENT_TIMESTAMP, "
+                "updated_at=CURRENT_TIMESTAMP WHERE session_id=:sid"
+            ),
+            {"sid": session_id},
+        )
+        db.commit()
+
+    # 自动流水线（后台执行，避免阻塞关闭请求）
+    pipeline_triggered = False
+    if settings.auto_pipeline_on_push and msgs:
+        background_tasks.add_task(_run_pipeline_task, raw_session_id)
+        pipeline_triggered = True
+
+    return {
+        "session_id": session_id,
+        "raw_session_id": raw_session_id,
+        "messages_pushed": pushed,
+        "pipeline_triggered": pipeline_triggered,
+        "message": "会话已关闭并推送至会话记录" if pushed else "该会话已推送过，未重复写入",
+    }
+
+
+def _run_pipeline_task(raw_session_id: str):
+    """后台任务：对推送进来的会话跑 清洗→质检→知识提炼。"""
+    from app.models.database import get_session_local
+    SessionLocal = get_session_local()
+    _db = SessionLocal()
+    try:
+        from app.services.pipeline_service import run_pipeline
+        stats = run_pipeline(_db, raw_session_id)
+        print(f"[流水线] {raw_session_id} 完成: {stats}")
+    except Exception as e:
+        print(f"[流水线] {raw_session_id} 失败: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        _db.close()
 
 
 @router.get("/sessions/{session_id}/messages")

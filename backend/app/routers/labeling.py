@@ -34,6 +34,8 @@ class CleaningConfig(BaseModel):
     min_quality: str = "low"  # 初次清洗用低门槛
     session_ids: Optional[List[str]] = None
     limit: int = 1000  # 每次处理数量
+    start_time: Optional[int] = None  # 时间窗起点（秒级时间戳），不填则取 2025-10-01 下限
+    end_time: Optional[int] = None  # 时间窗终点（秒级时间戳）
 
 
 class LabelRequest(BaseModel):
@@ -136,17 +138,20 @@ def clean_raw_data(
         min_quality=DataQuality(config.min_quality)
     )
     
-    # 获取会话（只获取有 2025年10月 及以后消息的会话）
+    # 获取会话（只获取时间窗内有消息的会话）
+    time_floor = config.start_time if config.start_time is not None else MIN_TIMESTAMP
     session_query = db.query(RawChat.session_id).filter(
-        RawChat.timestamp >= MIN_TIMESTAMP
+        RawChat.timestamp >= time_floor
     ).distinct()
     if config.session_ids:
         session_query = session_query.filter(RawChat.session_id.in_(config.session_ids))
-    
+    if config.end_time is not None:
+        session_query = session_query.filter(RawChat.timestamp <= config.end_time)
+
     sessions = session_query.limit(50).all()  # 限制会话数
-    
+
     created_count = 0
-    
+
     for (session_id,) in sessions:
         # 检查该会话是否已处理过
         existing = db.query(LabeledConversation).filter(
@@ -154,12 +159,15 @@ def clean_raw_data(
         ).first()
         if existing:
             continue
-        
-        # 获取消息（过滤 2025年10月 以前的数据）
-        messages = db.query(RawChat).filter(
+
+        # 获取消息（按时间窗过滤）
+        msg_q = db.query(RawChat).filter(
             RawChat.session_id == session_id,
-            RawChat.timestamp >= MIN_TIMESTAMP
-        ).order_by(RawChat.timestamp).limit(config.limit).all()
+            RawChat.timestamp >= time_floor,
+        )
+        if config.end_time is not None:
+            msg_q = msg_q.filter(RawChat.timestamp <= config.end_time)
+        messages = msg_q.order_by(RawChat.timestamp).limit(config.limit).all()
         
         if not messages:
             continue
@@ -183,7 +191,7 @@ def clean_raw_data(
         for ex in examples:
             # 构建对话文本
             conv_text = "\n".join([
-                f"{'小蚕' if t.role == 'assistant' else '客户'}: {t.content}"
+                f"{'本平台' if t.role == 'assistant' else '客户'}: {t.content}"
                 for t in ex.conversations
             ])
             
@@ -224,6 +232,8 @@ def clean_raw_data(
 def list_labeled_data(
     status: Optional[str] = Query(None, description="状态筛选"),
     category: Optional[str] = Query(None, description="分类筛选"),
+    start_time: Optional[int] = Query(None, description="时间窗起点（秒级时间戳，按记录创建时间）"),
+    end_time: Optional[int] = Query(None, description="时间窗终点（秒级时间戳，按记录创建时间）"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: DBSession = Depends(get_db)
@@ -239,6 +249,10 @@ def list_labeled_data(
             (LabeledConversation.human_category == category) | 
             (LabeledConversation.auto_category == category)
         )
+    if start_time is not None:
+        query = query.filter(LabeledConversation.created_at >= datetime.utcfromtimestamp(start_time))
+    if end_time is not None:
+        query = query.filter(LabeledConversation.created_at <= datetime.utcfromtimestamp(end_time))
     
     total = query.count()
     
@@ -408,18 +422,18 @@ def export_labeled_data(
     
     # 根据分类选择 system prompt
     SYSTEM_PROMPTS = {
-        "savings_explain": "我是小蚕惠生活（小蚕霸王餐）的客服小蚕，负责给用户讲清楚怎么点外卖更省钱、返利怎么算。说话专业亲和、简洁直接，可称「您」，红包力度和返利金额如实说明。",
-        "rebate_query": "我是小蚕客服小蚕，负责帮用户查返利到账情况。先安抚再给准话：返利按实付金额比例计算，订单完成后到账。说话专业亲和、直接爽快，可称「您」。",
-        "coupon_issue": "我是小蚕客服小蚕，负责处理外卖红包和优惠券问题（领不到、用不了、过期）。一步步教用户领券入口、使用门槛和有效期规则，可称「您」。",
-        "order_problem": "我是小蚕客服小蚕，负责处理订单异常（没跳转、没返利、券没用上、地址错误）。先问清订单号和时间再判断原因，说话负责、专业，可称「您」。",
-        "complaint": "我是小蚕客服小蚕，负责处理用户投诉。先共情道歉、承认问题，再给出明确补偿或处理方案，不推诿、不争对错，语气真诚，可称「您」。",
-        "merchant": "我是小蚕客服小蚕，负责到店霸王餐与探店体验。讲清中签规则、到店流程、内容要求：按时到店、拍图写真实体验、审核通过即返现，可称「您」。",
-        "brand_promo": "我是小蚕客服小蚕，负责介绍平台大牌特惠与合作品牌（茶百道、沪上阿姨、霸王茶姬、奈雪、茶颜悦色、夸父炸串等）。直接讲清优惠和参与方式，可称「您」。",
-        "points_box": "我是小蚕客服小蚕，负责积分和盲盒玩法。讲清规则：做任务攒积分、积分兑券、五折盲盒开品牌代金券。说话清楚有条理，可称「您」。",
-        "onboarding": "我是小蚕客服小蚕，负责带新用户上手。按步骤讲：下载App、注册登录、领红包、下单返利、提现。语气友好亲切，可称「您」。",
-        "chitchat": "我是小蚕客服小蚕，负责日常闲聊和礼貌性对话。简短热情回应，并顺势引导到省钱话题，可称「您」。",
+        "savings_explain": "我是本平台（本平台霸王餐）的客服本平台，负责给用户讲清楚怎么点外卖更省钱、返利怎么算。说话专业亲和、简洁直接，可称「您」，红包力度和返利金额如实说明。",
+        "rebate_query": "我是本平台客服本平台，负责帮用户查返利到账情况。先安抚再给准话：返利按实付金额比例计算，订单完成后到账。说话专业亲和、直接爽快，可称「您」。",
+        "coupon_issue": "我是本平台客服本平台，负责处理外卖红包和优惠券问题（领不到、用不了、过期）。一步步教用户领券入口、使用门槛和有效期规则，可称「您」。",
+        "order_problem": "我是本平台客服本平台，负责处理订单异常（没跳转、没返利、券没用上、地址错误）。先问清订单号和时间再判断原因，说话负责、专业，可称「您」。",
+        "complaint": "我是本平台客服本平台，负责处理用户投诉。先共情道歉、承认问题，再给出明确补偿或处理方案，不推诿、不争对错，语气真诚，可称「您」。",
+        "merchant": "我是本平台客服本平台，负责到店霸王餐与探店体验。讲清中签规则、到店流程、内容要求：按时到店、拍图写真实体验、审核通过即返现，可称「您」。",
+        "brand_promo": "我是本平台客服本平台，负责介绍平台大牌特惠与合作品牌（茶百道、沪上阿姨、霸王茶姬、奈雪、茶颜悦色、夸父炸串等）。直接讲清优惠和参与方式，可称「您」。",
+        "points_box": "我是本平台客服本平台，负责积分和盲盒玩法。讲清规则：做任务攒积分、积分兑券、五折盲盒开品牌代金券。说话清楚有条理，可称「您」。",
+        "onboarding": "我是本平台客服本平台，负责带新用户上手。按步骤讲：下载App、注册登录、领红包、下单返利、提现。语气友好亲切，可称「您」。",
+        "chitchat": "我是本平台客服本平台，负责日常闲聊和礼貌性对话。简短热情回应，并顺势引导到省钱话题，可称「您」。",
     }
-    DEFAULT_PROMPT = "我是小蚕惠生活（小蚕霸王餐）的客服小蚕，帮用户点外卖省钱、领红包、拿返利、参加到店霸王餐。说话专业亲和、简洁直接，可称「您」。"
+    DEFAULT_PROMPT = "我是本平台（本平台霸王餐）的客服本平台，帮用户点外卖省钱、领红包、拿返利、参加到店霸王餐。说话专业亲和、简洁直接，可称「您」。"
     
     dataset = []
     
@@ -435,7 +449,7 @@ def export_labeled_data(
             for line in text.split("\n"):
                 if ": " in line:
                     role, content = line.split(": ", 1)
-                    from_role = "gpt" if role in ["小蚕", "助手", "我"] else "human"
+                    from_role = "gpt" if role in ["本平台", "助手", "我"] else "human"
                     conversations.append({"from": from_role, "value": content})
             
             dataset.append({
@@ -449,9 +463,9 @@ def export_labeled_data(
             # 提取问答对
             lines = text.split("\n")
             for i in range(len(lines) - 1):
-                if "客户: " in lines[i] and "小蚕: " in lines[i+1]:
+                if "客户: " in lines[i] and "本平台: " in lines[i+1]:
                     q = lines[i].replace("客户: ", "")
-                    a = lines[i+1].replace("小蚕: ", "")
+                    a = lines[i+1].replace("本平台: ", "")
                     dataset.append({
                         "instruction": q,
                         "input": "",

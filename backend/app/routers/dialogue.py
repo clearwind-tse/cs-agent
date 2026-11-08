@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.models.database import get_db
 from app.models.dialogue import DialogueSession, DialogueSet
 from app.services.dialogue import MAX_TURNS, customer_turn, generate_scenarios
-from app.services.xiaocan_persona import CATEGORY_LABELS
+from app.services.benpingtai_persona import CATEGORY_LABELS
 
 router = APIRouter(prefix="/api/dialogue", tags=["dialogue"])
 
@@ -75,7 +75,7 @@ def generate_set(req: GenerateDialogueRequest, db: DBSession = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"情景生成失败: {str(e)}")
 
     title = req.title or (
-        f"{CATEGORY_LABELS.get(req.category, '小蚕客服')}对话实训 "
+        f"{CATEGORY_LABELS.get(req.category, '本平台客服')}对话实训 "
         f"#{db.query(func.count(DialogueSet.id)).scalar() + 1}"
     )
     dset = DialogueSet(

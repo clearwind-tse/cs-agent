@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.models.chat import StagingConversation
 from app.services.quiz import _get_llm_client
-from app.services.xiaocan_persona import (
+from app.services.benpingtai_persona import (
     BUSINESS_CONTEXT,
     CATEGORY_LABELS,
     FORBIDDEN_TOPICS,
@@ -33,7 +33,7 @@ MAX_SOURCE_TURNS = 20
 MAX_SOURCE_CHARS = 2000
 
 
-DISTILL_SCENARIO_PROMPT = """你是「小蚕惠生活（小蚕霸王餐）」的客服培训情景设计师。下面给你【一场真实发生的小蚕客服对话】，请依据它提炼出 1 个用于多轮对话实训的客户情景。
+DISTILL_SCENARIO_PROMPT = """你是「本平台（本平台霸王餐）」的客服培训情景设计师。下面给你【一场真实发生的本平台客服对话】，请依据它提炼出 1 个用于多轮对话实训的客户情景。
 
 【业务背景·必须严格贴合】
 {BUSINESS_CONTEXT}
@@ -62,14 +62,14 @@ DISTILL_SCENARIO_PROMPT = """你是「小蚕惠生活（小蚕霸王餐）」的
 严格输出 JSON 对象，不要输出其他内容：
 {{
   "customer_persona": "学生党，大三，几乎天天点外卖",
-  "customer_background": "在小蚕领了红包但外卖是在美团 App 直接下的单",
+  "customer_background": "在本平台领了红包但外卖是在美团 App 直接下的单",
   "hidden_needs": "想要回这笔返利，有点不爽但还不算激动",
-  "expected_points": "讲清必须从小蚕跳转下单才有返利；给出下次的正确操作",
+  "expected_points": "讲清必须从本平台跳转下单才有返利；给出下次的正确操作",
   "difficulty": "easy"
 }}"""
 
 
-CUSTOMER_ROLEPLAY_PROMPT = """你现在要扮演一位找「小蚕惠生活」客服咨询的客户。你只看得到客服的回复，要像真人一样继续对话。
+CUSTOMER_ROLEPLAY_PROMPT = """你现在要扮演一位找「本平台」客服咨询的客户。你只看得到客服的回复，要像真人一样继续对话。
 
 【你的人设】
 {persona}

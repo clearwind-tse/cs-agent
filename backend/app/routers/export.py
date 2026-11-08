@@ -239,7 +239,7 @@ def _replace_resource_links(text: str) -> str:
     return result.strip()
 
 
-# 禁用标点符号（小蚕场景允许标点，保留为空）
+# 禁用标点符号（本平台场景允许标点，保留为空）
 FORBIDDEN_PUNCTUATION = []
 
 
@@ -247,7 +247,7 @@ def _validate_and_fix_gpt_response(text: str, category: str = "savings_explain")
     """
     轻量清洗 GPT 回复。
 
-    小蚕场景允许标点与"您"等礼貌称呼，不再做价格红线替换与逐行拆字。
+    本平台场景允许标点与"您"等礼貌称呼，不再做价格红线替换与逐行拆字。
     仅做空白规整，保留原文风格。
 
     Args:
@@ -383,7 +383,7 @@ def _clean_conversation_for_training(conversations: list, desensitize_price: boo
         
         value = _re.sub(r'\[[^\]]+\]', _clean_bracket, value)
         
-        # 小蚕场景允许「您」等礼貌称呼，不做替换
+        # 本平台场景允许「您」等礼貌称呼，不做替换
         
         # 清理多余空行和空格
         value = _re.sub(r'\n\s*\n\s*\n', '\n\n', value)
@@ -1059,8 +1059,8 @@ def _format_staging_item(item: StagingConversation, format: str, include_system_
 
 
 def _get_system_prompt_for_category(category: str) -> str:
-    """根据类别获取系统提示（小蚕惠生活·客服人设）"""
-    base = "我是小蚕惠生活（小蚕霸王餐）的客服小蚕，帮用户点外卖省钱、领红包、拿返利、参加到店霸王餐。说话专业亲和、简洁直接，可称「您」。"
+    """根据类别获取系统提示（本平台·客服人设）"""
+    base = "我是本平台（本平台霸王餐）的客服本平台，帮用户点外卖省钱、领红包、拿返利、参加到店霸王餐。说话专业亲和、简洁直接，可称「您」。"
     prompts = {
         "savings_explain": base + "用户想了解怎么点外卖更省钱、返利怎么算，用大白话讲清楚：先领红包再下单、返利每单最低15元、到店霸王餐写好评可0元吃。",
         "rebate_query": base + "用户问返利到哪了、为啥少了，先安抚再给准话：返利按实付金额比例计算，订单完成后到账。",

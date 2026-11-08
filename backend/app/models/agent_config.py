@@ -32,6 +32,9 @@ class AgentSession(Base):
     display_name = Column(String(200), nullable=True)
     last_message = Column(Text, nullable=True)
     message_count = Column(Integer, default=0)
+    # 会话生命周期：active=进行中 / closed=已关闭并推送
+    status = Column(String(20), default='active', index=True)
+    closed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

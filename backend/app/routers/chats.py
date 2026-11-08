@@ -12,7 +12,11 @@ from pydantic import BaseModel
 from datetime import datetime
 
 from app.models.database import get_db
-from app.models.chat import RawChat, Session, Contact
+from app.models.chat import (
+    RawChat, Session, Contact,
+    StagingConversation, LabeledConversation, KnowledgeArticle, KnowledgeChunk,
+)
+from app.models.quality import QualityInspection
 from app.config import get_settings
 
 settings = get_settings()
@@ -245,6 +249,130 @@ def get_voice_file(filename: str):
         media_type="audio/mpeg",
         headers={"Accept-Ranges": "bytes"}
     )
+
+
+@router.get("/sessions/{session_id}/related")
+def get_related_records(session_id: str, db: DBSession = Depends(get_db)):
+    """
+    关联档案：聚合某会话在闭环各阶段的记录。
+    原始消息 → 清洗(staging) / 标注(labeled) → 质检 → 知识提炼，全部按 session_id 串联。
+    """
+    session = db.query(Session).filter(Session.session_id == session_id).first()
+    raw_msgs = (
+        db.query(RawChat)
+        .filter(RawChat.session_id == session_id)
+        .order_by(RawChat.timestamp)
+        .all()
+    )
+    staging = (
+        db.query(StagingConversation)
+        .filter(StagingConversation.session_id == session_id)
+        .order_by(StagingConversation.created_at.desc())
+        .all()
+    )
+    labeled = (
+        db.query(LabeledConversation)
+        .filter(LabeledConversation.session_id == session_id)
+        .order_by(LabeledConversation.created_at.desc())
+        .all()
+    )
+    qc = (
+        db.query(QualityInspection)
+        .filter(QualityInspection.session_id == session_id)
+        .order_by(QualityInspection.created_at.desc())
+        .all()
+    )
+    articles = (
+        db.query(KnowledgeArticle)
+        .filter(KnowledgeArticle.source_session_id == session_id)
+        .order_by(KnowledgeArticle.created_at.desc())
+        .all()
+    )
+    chunks = (
+        db.query(KnowledgeChunk)
+        .filter(KnowledgeChunk.session_id == session_id)
+        .order_by(KnowledgeChunk.start_time)
+        .all()
+    )
+
+    return {
+        "session_id": session_id,
+        "session": SessionResponse.model_validate(session).model_dump() if session else None,
+        "raw": {
+            "count": len(raw_msgs),
+            "start_time": raw_msgs[0].timestamp if raw_msgs else None,
+            "end_time": raw_msgs[-1].timestamp if raw_msgs else None,
+            "push_source": session.push_source if session else None,
+        },
+        "staging": [
+            {
+                "id": s.id,
+                "status": s.status,
+                "auto_category": s.auto_category,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+            }
+            for s in staging
+        ],
+        "labeled": [
+            {
+                "id": l.id,
+                "status": l.status,
+                "auto_category": l.auto_category,
+                "human_category": l.human_category,
+                "auto_quality_score": l.auto_quality_score,
+                "created_at": l.created_at.isoformat() if l.created_at else None,
+            }
+            for l in labeled
+        ],
+        "quality_inspections": [
+            {
+                "id": r.id,
+                "overall_score": r.overall_score,
+                "scored": r.scored,
+                "status": r.status,
+                "violations": len(r.violations or []),
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in qc
+        ],
+        "knowledge_articles": [
+            {
+                "id": a.id,
+                "scene": a.scene,
+                "scene_category": a.scene_category,
+                "confidence": a.confidence,
+                "is_verified": a.is_verified,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+            }
+            for a in articles
+        ],
+        "knowledge_chunks": [
+            {
+                "id": c.id,
+                "topic_summary": c.topic_summary,
+                "start_time": c.start_time,
+                "end_time": c.end_time,
+            }
+            for c in chunks
+        ],
+    }
+
+
+@router.post("/sessions/{session_id}/pipeline/run")
+def run_session_pipeline(
+    session_id: str,
+    start_time: Optional[int] = Query(None, description="时间窗起点（秒级时间戳）"),
+    end_time: Optional[int] = Query(None, description="时间窗终点（秒级时间戳）"),
+    db: DBSession = Depends(get_db),
+):
+    """手动触发某会话的 清洗→质检→知识提炼（补跑 / 重跑）。"""
+    session = db.query(Session).filter(Session.session_id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="会话不存在")
+
+    from app.services.pipeline_service import run_pipeline
+    stats = run_pipeline(db, session_id, start_time=start_time, end_time=end_time)
+    return {"message": "流水线执行完成", "stats": stats}
 
 
 @router.get("/context/{message_id}")

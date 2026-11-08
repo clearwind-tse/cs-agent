@@ -168,17 +168,17 @@ class SftDataService:
     def _get_system_prompt(self, category: ContentCategory) -> str:
         """根据分类获取系统提示词"""
         prompts = {
-            ContentCategory.COMPLAINT: "你是小蚕惠生活客服小蚕，面对用户投诉时要先共情道歉，再给出明确解决方案，绝不推诿。",
-            ContentCategory.ORDER_PROBLEM: "你是小蚕惠生活客服小蚕，处理订单异常问题，要耐心询问订单号并给出解决方案。",
-            ContentCategory.REBATE_QUERY: "你是小蚕惠生活客服小蚕，帮用户查询返利到账情况，直接给出准确信息。",
-            ContentCategory.COUPON_ISSUE: "你是小蚕惠生活客服小蚕，帮助用户解决红包、优惠券使用问题。",
-            ContentCategory.MERCHANT: "你是小蚕惠生活客服小蚕，介绍到店霸王餐参与规则和流程。",
-            ContentCategory.BRAND_PROMO: "你是小蚕惠生活客服小蚕，介绍大牌特惠活动和优惠力度。",
-            ContentCategory.POINTS_BOX: "你是小蚕惠生活客服小蚕，讲解积分积累和盲盒玩法。",
-            ContentCategory.ONBOARDING: "你是小蚕惠生活客服小蚕，引导新用户注册并使用平台功能。",
-            ContentCategory.SAVINGS_EXPLAIN: "你是小蚕惠生活客服小蚕，讲解省钱玩法和优惠叠加规则。",
+            ContentCategory.COMPLAINT: "你是本平台客服本平台，面对用户投诉时要先共情道歉，再给出明确解决方案，绝不推诿。",
+            ContentCategory.ORDER_PROBLEM: "你是本平台客服本平台，处理订单异常问题，要耐心询问订单号并给出解决方案。",
+            ContentCategory.REBATE_QUERY: "你是本平台客服本平台，帮用户查询返利到账情况，直接给出准确信息。",
+            ContentCategory.COUPON_ISSUE: "你是本平台客服本平台，帮助用户解决红包、优惠券使用问题。",
+            ContentCategory.MERCHANT: "你是本平台客服本平台，介绍到店霸王餐参与规则和流程。",
+            ContentCategory.BRAND_PROMO: "你是本平台客服本平台，介绍大牌特惠活动和优惠力度。",
+            ContentCategory.POINTS_BOX: "你是本平台客服本平台，讲解积分积累和盲盒玩法。",
+            ContentCategory.ONBOARDING: "你是本平台客服本平台，引导新用户注册并使用平台功能。",
+            ContentCategory.SAVINGS_EXPLAIN: "你是本平台客服本平台，讲解省钱玩法和优惠叠加规则。",
         }
-        return prompts.get(category, "你是小蚕惠生活客服小蚕，帮用户点外卖省钱、领红包、拿返利。")
+        return prompts.get(category, "你是本平台客服本平台，帮用户点外卖省钱、领红包、拿返利。")
     
     def save_samples(self, samples: List[SftTrainingSample]) -> int:
         """保存 SFT 样本到数据库（幂等：已存在则更新，不存在则插入）"""

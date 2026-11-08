@@ -123,6 +123,8 @@ def trigger_extraction(
 def list_articles(
     category: Optional[str] = Query(None, description="按分类过滤"),
     verified: Optional[bool] = Query(None, description="按验证状态过滤"),
+    start_time: Optional[int] = Query(None, description="时间窗起点（秒级时间戳，按创建时间）"),
+    end_time: Optional[int] = Query(None, description="时间窗终点（秒级时间戳，按创建时间）"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: DBSession = Depends(get_db),
@@ -134,6 +136,10 @@ def list_articles(
         query = query.filter(KnowledgeArticle.scene_category == category)
     if verified is not None:
         query = query.filter(KnowledgeArticle.is_verified == verified)
+    if start_time is not None:
+        query = query.filter(KnowledgeArticle.created_at >= datetime.utcfromtimestamp(start_time))
+    if end_time is not None:
+        query = query.filter(KnowledgeArticle.created_at <= datetime.utcfromtimestamp(end_time))
 
     query = query.order_by(KnowledgeArticle.confidence.desc())
     articles = query.offset(skip).limit(limit).all()

@@ -357,6 +357,8 @@ def list_inspections(
     status: Optional[str] = None,
     config_id: Optional[int] = None,
     scored: Optional[bool] = None,
+    start_time: Optional[int] = Query(None, description="时间窗起点（秒级时间戳，按创建时间）"),
+    end_time: Optional[int] = Query(None, description="时间窗终点（秒级时间戳，按创建时间）"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: DBSession = Depends(get_db),
@@ -376,6 +378,10 @@ def list_inspections(
         query = query.filter(QualityInspection.config_id == config_id)
     if scored is not None:
         query = query.filter(QualityInspection.scored == scored)
+    if start_time is not None:
+        query = query.filter(QualityInspection.created_at >= datetime.utcfromtimestamp(start_time))
+    if end_time is not None:
+        query = query.filter(QualityInspection.created_at <= datetime.utcfromtimestamp(end_time))
     # violation_type 过滤（violations 为 JSON 数组，DB 无关，统一在内存做，避免 JSONB/SQLite 差异）
     if violation_type:
         candidate = query.all()

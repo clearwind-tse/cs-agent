@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional
 _ORDERS: Dict[str, Dict[str, Any]] = {
     "GM20250803-1287": {
         "order_id": "GM20250803-1287",
-        "product_name": "小蚕红包券 10元",
+        "product_name": "本平台红包券 10元",
         "amount": 10.00,
         "status": "已签收",
         "pay_time": "2025-08-03 14:30:00",

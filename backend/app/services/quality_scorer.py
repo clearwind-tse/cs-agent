@@ -18,7 +18,7 @@ class QualityScore:
     """质量评分结果"""
     overall: float          # 总分 0-10
     completeness: float     # 完整性：对话是否完整
-    relevance: float        # 相关性：是否与小蚕客服场景相关
+    relevance: float        # 相关性：是否与本平台客服场景相关
     usefulness: float       # 实用性：是否有学习价值
     role_clarity: float     # 角色清晰度：客服/用户角色是否明确
     reason: str             # 评分理由
@@ -31,14 +31,14 @@ class LLMQualityScorer:
     使用 LLM 进行质量评分
     """
     
-    SCORING_PROMPT = """你是小蚕惠生活客服AI训练数据的质量评审专家。请评估以下对话是否适合用于训练客服AI。
+    SCORING_PROMPT = """你是本平台客服AI训练数据的质量评审专家。请评估以下对话是否适合用于训练客服AI。
 
 ## 对话内容：
 {conversation}
 
 ## 评分维度（每项 0-10 分）：
 1. **完整性**：对话是否有完整的问答结构，不是断章取义
-2. **相关性**：是否与小蚕惠生活的红包、返利、霸王餐、订单、积分等业务相关
+2. **相关性**：是否与本平台的红包、返利、霸王餐、订单、积分等业务相关
 3. **实用性**：是否包含可学习的客服回答、规则说明、问题处理方法
 4. **角色清晰**：客服和用户的角色是否明确可辨
 
@@ -64,7 +64,7 @@ class LLMQualityScorer:
   "role_clarity": 8,
   "overall": 8,
   "category": "rebate_query",
-  "reason": "这是一段完整的返利到账咨询，用户问返利为何未到账，小蚕解释了返利计算方式和到账时间，有学习价值",
+  "reason": "这是一段完整的返利到账咨询，用户问返利为何未到账，本平台解释了返利计算方式和到账时间，有学习价值",
   "include": true
 }
 ```
@@ -268,7 +268,7 @@ class ConversationRewriter:
     用 LLM 改善对话质量或生成变体
     """
     
-    REWRITE_PROMPT = """请改写以下小蚕客服对话，使其更加专业、完整、有学习价值。
+    REWRITE_PROMPT = """请改写以下本平台客服对话，使其更加专业、完整、有学习价值。
 
 原始对话：
 {conversation}
@@ -277,13 +277,13 @@ class ConversationRewriter:
 1. 保持原意，但让表达更专业清晰
 2. 如果对话不完整，补充合理的结尾
 3. 明确客服和用户的角色
-4. 突出小蚕客服的规则说明与问题处理亮点
+4. 突出本平台客服的规则说明与问题处理亮点
 
 请用以下格式返回：
 用户: xxx
-小蚕: xxx
+本平台: xxx
 用户: xxx
-小蚕: xxx
+本平台: xxx
 """
 
     def __init__(self):
@@ -334,12 +334,12 @@ class RoleLabeler:
     自动识别对话中的客服和用户角色
     """
     
-    LABEL_PROMPT = """分析以下对话，判断每句话是小蚕客服说的还是用户说的。
+    LABEL_PROMPT = """分析以下对话，判断每句话是本平台客服说的还是用户说的。
 
 对话：
 {conversation}
 
-小蚕客服的特征：解释红包/返利规则、说明活动、处理订单问题、引导操作
+本平台客服的特征：解释红包/返利规则、说明活动、处理订单问题、引导操作
 用户的特征：提问、反馈问题、表达不满、咨询怎么用
 
 请返回 JSON 数组，每个元素包含 role（"sales" 或 "customer"）和 content：

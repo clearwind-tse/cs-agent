@@ -35,7 +35,7 @@ from app.services.agent_registry import get_agent_registry
 from app.services.intent_recognition import IntentRecognitionService
 from app.services.tools.registry import get_tool_registry
 from app.services.tools import RagKnowledgeTool
-from app.services.xiaocan_persona import AGENT_PERSONA, BUSINESS_CONTEXT, FORBIDDEN_TOPICS
+from app.services.benpingtai_persona import AGENT_PERSONA, BUSINESS_CONTEXT, FORBIDDEN_TOPICS
 from app.models.agent_config import AgentConfig, AgentMessage, IntentRecord, EmotionRecord
 
 
@@ -263,7 +263,7 @@ def _build_system_prompt(state: AgentState, agent_cfg: Optional[AgentConfig]) ->
     DST 状态块是本轮 prompt 的核心——客户已经说过的信息全部在这里，
     并且明确标注"禁止再问"，从结构上消除"反复问订单号"的可能。
     """
-    name = state.get("agent_name") or "蚕宝"
+    name = state.get("agent_name") or "小助手"
     intent = state.get("intent") or "unknown"
     sub_intent = state.get("sub_intent")
     emotion = state.get("emotion_type") or "neutral"
@@ -278,7 +278,7 @@ def _build_system_prompt(state: AgentState, agent_cfg: Optional[AgentConfig]) ->
         phase_action = ""
 
     return (
-        f"你是「小蚕惠生活」的在线客服「{name}」。{AGENT_PERSONA}\n"
+        f"你是「本平台」的在线客服「{name}」。{AGENT_PERSONA}\n"
         f"你的职责：{desc}\n\n"
         f"## 业务事实（不得超出这个范围承诺）\n{BUSINESS_CONTEXT}\n"
         f"不属于本平台的业务：{FORBIDDEN_TOPICS}\n\n"
@@ -297,7 +297,7 @@ def _build_system_prompt(state: AgentState, agent_cfg: Optional[AgentConfig]) ->
         "只能引用系统查到的真实订单号；没有真实单号就说「订单页显示的那一单」。\n"
         "4. 【代词消解】「它 / 那个 / 这单」等指代，按「已知信息」里的商品与订单理解，"
         "不要反问「您说的是哪个」。\n"
-        "5. 【不确定就问口径，不要臆测】客户提到的商品/权益名称（例如「蚕豆」）若不在已知订单里，"
+        "5. 【不确定就问口径，不要臆测】客户提到的商品/权益名称（例如「本平台」）若不在已知订单里，"
         "先确认它指的是哪笔订单或哪种资产，不要直接当成实物商品，也不要承诺退款金额。\n"
         "6. 【按阶段行动】"
         f"当前阶段 {phase}：{phase_action}\n"
@@ -311,6 +311,12 @@ def _build_system_prompt(state: AgentState, agent_cfg: Optional[AgentConfig]) ->
         "绝不能说「已退款/已受理/受理单号是 RMA…」**，也不许自己编 RMA 号。"
         "该工具需要坐席确认，调用后若被告知等待，就告诉客户「已提交坐席确认」。\n"
         "10. 回复 2-4 句，中文，口语化；不要用「亲亲」，不要输出 JSON 或内部字段名。\n"
+        "11. 【内部内容绝不外发】技能（Skill）返回的处置手册、SOP、分级定性（P0-P3）、"
+        "升级阈值与升级路径、内部工具名（如 escalate_ticket、submit_refund、refund_eligible）、"
+        "「话术要点」「避免」「补偿标准」「参考话术」「值班经理」等都属于内部信息；"
+        "面向客户的回复里禁止出现这些字样，更不能原文或分节粘贴，只能消化成一句自然语言结论。\n"
+        "12. 【单一发言】一条回复只输出一段面向客户的连贯话术；不要输出 Markdown 标题、"
+        "分节编号（如「## 1）」「---」）、要点清单或任何内部推理过程。\n"
     ) + _build_rag_references(state)
 
 
@@ -751,6 +757,72 @@ def _is_real_order(token: str) -> bool:
         return False
 
 
+# ==================== 内部内容外泄过滤（发送前） ====================
+#
+# 故障现场：投诉 Agent 调用 skill_complaint-sop 拿到整份 SOP 后，把「五步法 / P0-P3 分级 /
+# 升级路径 / 内部工具名 / 话术要点」原样粘贴给客户。这类内容一旦外发，既暴露内部策略，
+# 又让客户看到「坐席审批」「升级阈值」等不该知道的细节。这里做一道硬过滤：
+# 检出内部特征 → 整条回复替换为基于真实状态的安全话术，绝不外发。
+
+# 只要出现就必定是内部内容的强特征（正常客户话术里不会出现）
+_INTERNAL_HARD_MARKERS = (
+    "五步法", "投诉受理方案", "升级路径", "升级机制", "话术要点", "工单建议",
+    "参考话术", "补偿标准", "定性分类", "内部手册", "内部处置", "内部备注",
+    "escalate_ticket", "submit_refund", "refund_eligible",
+    "值班经理", "高级客服组",
+)
+
+
+def _contains_internal_leak(text: str) -> bool:
+    """判断一段回复是否混入了内部 SOP / 分级 / 工具名等不可外发内容。"""
+    if not text:
+        return False
+    if any(m in text for m in _INTERNAL_HARD_MARKERS):
+        return True
+    # P0-P3 分级：单独出现可能是巧合，需与「升级/分级/情绪/优先/响应/SOP」语境同现
+    if re.search(r"\bP[0-3]\b", text) and any(
+        w in text for w in ("升级", "分级", "情绪", "优先", "响应", "SOP")
+    ):
+        return True
+    # 内部手册的典型排版：Markdown 分节标题（## 一、 / ## 1) ）
+    if re.search(r"(?m)^#{1,6}\s*(?:[一二三四五六七八九十]+[、.]|\d+\s*[)）.])", text):
+        return True
+    # 「定性：」「避免：」这类内部备注字段
+    if re.search(r"(?:定性|避免)\s*[：:]", text):
+        return True
+    return False
+
+
+def _safe_fallback_answer(state: AgentState) -> str:
+    """
+    内部内容被拦截后，用「系统已知的真实状态」拼一条安全、可执行的客户话术。
+    不使用模型原文，避免残留泄露；同时保持对客户的确定性（订单/资格/工单）。
+    """
+    dst = state.get("dst")
+    order_id = getattr(dst, "order_id", None) if dst is not None else None
+    product = getattr(dst, "product_name", None) if dst is not None else None
+    eligible = getattr(dst, "refund_eligible", None) if dst is not None else None
+    ticket = resolve_session_ticket(state.get("db"), state.get("session_id"))
+    ticket_no = (ticket or {}).get("ticket_no")
+
+    parts = []
+    if order_id:
+        seg = f"您反馈的 {order_id} 这单我已经核实"
+        if product:
+            seg += f"（{product}）"
+        if eligible is True:
+            seg += "，权益还在、符合退款条件"
+        elif eligible is False:
+            seg += "，暂时不符合退款条件"
+        parts.append(seg + "。")
+    else:
+        parts.append("您反馈的问题我已经记录下来了。")
+    if ticket_no:
+        parts.append(f"对商家的意见我已一并记成投诉工单（{ticket_no}）跟进。")
+    parts.append("您方便时告诉我具体想怎么处理，我马上帮您推进。")
+    return "".join(parts)
+
+
 def _sanitize_answer(answer: str, state: AgentState) -> str:
     """
     抹掉模型自己编的/抄示例的订单号。
@@ -761,6 +833,10 @@ def _sanitize_answer(answer: str, state: AgentState) -> str:
     """
     if not answer:
         return answer
+    # 【发送前过滤】内部内容外泄 → 直接替换为安全话术，不保留任何原文
+    if _contains_internal_leak(answer):
+        print("[LangGraphAgent] 检出内部内容外泄，已替换为安全话术")
+        return _safe_fallback_answer(state)
     known = _known_order_ids(state)
     for token in set(_ORDER_ID_TOKEN_RE.findall(answer)):
         if token.upper() in known or not _looks_like_order_id(token):
@@ -1165,6 +1241,8 @@ class LangGraphCustomerAgent:
         }
 
         streamed_any = False
+        suppress_tokens = False
+        streamed_acc = ""
         try:
             graph = _get_compiled_graph()
             config = {"configurable": {"thread_id": f"{session_id}:t{dst.turn_count}"}}
@@ -1175,7 +1253,13 @@ class LangGraphCustomerAgent:
                     content = _extract_chunk_text(ev.get("data", {}).get("chunk"))
                     if content:
                         streamed_any = True
-                        yield {"type": "token", "content": content}
+                        if not suppress_tokens:
+                            streamed_acc += content
+                            if _contains_internal_leak(streamed_acc):
+                                suppress_tokens = True
+                                print("[LangGraph] 流式检出内部内容外泄，已停止继续下发")
+                            else:
+                                yield {"type": "token", "content": content}
                 elif ev_type == "on_graph_end":
                     final_state = ev.get("data", {}).get("output")
 

@@ -2,8 +2,8 @@
 """
 LLM 驱动的训练数据批量生成服务
 
-业务场景：小蚕惠生活（小蚕霸王餐）——帮你点外卖省钱、吃喝玩乐的本地生活平台。
-生成立场：平台客服视角（客服自称「小蚕 / 蚕宝」，专业亲和）。
+业务场景：本平台（本平台霸王餐）——帮你点外卖省钱、吃喝玩乐的本地生活平台。
+生成立场：平台客服视角（客服自称「本平台 / 小助手」，专业亲和）。
 严格复刻真实微信客服对话风格。
 """
 import json
@@ -27,8 +27,8 @@ SCENARIO_TEMPLATES = [
     {
         "category": "savings_explain",
         "title": "新人问怎么用",
-        "user_persona": "刚听说小蚕 想知道怎么点外卖省钱",
-        "user_opening": "小蚕惠生活怎么用啊\n听说点外卖能便宜不少",
+        "user_persona": "刚听说本平台 想知道怎么点外卖省钱",
+        "user_opening": "本平台怎么用啊\n听说点外卖能便宜不少",
         "key_topics": ["先领券再下单", "返利最低15元起", "每月省500-1000"],
     },
     {
@@ -41,7 +41,7 @@ SCENARIO_TEMPLATES = [
     {
         "category": "savings_explain",
         "title": "问支持哪些平台",
-        "user_opening": "小蚕支持美团饿了么吗",
+        "user_opening": "本平台支持美团饿了么吗",
         "user_persona": "点外卖渠道多 想确认覆盖范围",
         "key_topics": ["美团", "饿了么", "京东外卖", "淘宝闪购"],
     },
@@ -112,7 +112,7 @@ SCENARIO_TEMPLATES = [
         "title": "这单没返上",
         "user_opening": "我这单好像没返上\n是不是漏了",
         "user_persona": "下单后没拿到返利",
-        "key_topics": ["要订单号", "是否从小蚕跳转", "没跳无法补录"],
+        "key_topics": ["要订单号", "是否从本平台跳转", "没跳无法补录"],
     },
     {
         "category": "order_problem",
@@ -123,9 +123,9 @@ SCENARIO_TEMPLATES = [
     },
     {
         "category": "order_problem",
-        "title": "没从小蚕跳转",
+        "title": "没从本平台跳转",
         "user_opening": "我直接在美团下的单\n能补返利吗",
-        "user_persona": "忘了从小蚕跳转下单",
+        "user_persona": "忘了从本平台跳转下单",
         "key_topics": ["无法补录", "下次先领券", "说明跳转方式"],
     },
 
@@ -170,7 +170,7 @@ SCENARIO_TEMPLATES = [
     {
         "category": "merchant",
         "title": "商家想入驻",
-        "user_opening": "我们店想入驻小蚕\n怎么联系",
+        "user_opening": "我们店想入驻本平台\n怎么联系",
         "user_persona": "商家想谈合作",
         "key_topics": ["要门店城市联系方式", "对接商务", "欢迎入驻"],
     },
@@ -179,7 +179,7 @@ SCENARIO_TEMPLATES = [
     {
         "category": "brand_promo",
         "title": "问茶百道",
-        "user_opening": "茶百道在小蚕有优惠吗",
+        "user_opening": "茶百道在本平台有优惠吗",
         "user_persona": "想喝奶茶找券",
         "key_topics": ["已入驻", "App搜品牌", "全天有优惠"],
     },
@@ -239,7 +239,7 @@ SCENARIO_TEMPLATES = [
     {
         "category": "onboarding",
         "title": "安卓能下吗",
-        "user_opening": "安卓能下小蚕吗",
+        "user_opening": "安卓能下本平台吗",
         "user_persona": "安卓用户确认可用性",
         "key_topics": ["安卓iOS都有", "App Store 4.6分", "下载引导"],
     },
@@ -248,7 +248,7 @@ SCENARIO_TEMPLATES = [
     {
         "category": "chitchat",
         "title": "问总部在哪",
-        "user_opening": "小蚕你们总部在哪啊",
+        "user_opening": "本平台你们总部在哪啊",
         "user_persona": "随便问问 建立信任",
         "key_topics": ["杭州", "杭州柏鹿", "300+城市"],
     },
@@ -272,20 +272,20 @@ SCENARIO_TEMPLATES = [
 REAL_EXPRESSIONS = {
     "assistant_phrases": [
         "您好~",
-        "小蚕帮你看下",
+        "本平台帮你看下",
         "收到",
         "方便把订单号发我下吗",
         "返利一般1-3个工作日到账",
         "余额满1元就能提现",
         "记得先领券再下单",
-        "要从我们小蚕这里跳转下单哦",
+        "要从我们本平台这里跳转下单哦",
         "每天都有新红包可以领",
-        "有不懂的随时找小蚕",
+        "有不懂的随时找本平台",
         "给你添麻烦了",
         "祝用餐愉快~",
     ],
     "user_phrases": [
-        "小蚕", "蚕宝", "客服",
+        "本平台", "小助手", "客服",
         "这单返了吗", "券怎么用", "能便宜多少",
         "怎么提现", "有优惠吗", "靠谱吗",
         "神券", "回血", "白嫖", "霸王餐",
@@ -304,14 +304,14 @@ FORBIDDEN_PUNCTUATION: List[str] = []
 
 # ==================== 分类 System Prompt ====================
 
-_PERSONA_BASE = """我是小蚕惠生活的客服小蚕，也叫蚕宝。小蚕是帮你点外卖省钱、吃喝玩乐薅羊毛的本地生活平台。
+_PERSONA_BASE = """我是本平台的客服本平台，也叫小助手。本平台是帮你点外卖省钱、吃喝玩乐薅羊毛的本地生活平台。
 
 【说话风格】
 专业又亲和，像微信上和用户聊天。可以用标点，称呼用户用"你"或"您"，偶尔用 emoji（🦊😊🙏）。
 回答简洁，一条说清一件事，不要长篇大论。
 
 【必须准确的信息】
-- 用法：点外卖前先在小蚕领券，再去美团/饿了么/京东外卖/淘宝闪购下单
+- 用法：点外卖前先在本平台领券，再去美团/饿了么/京东外卖/淘宝闪购下单
 - 返利：部分订单有，单笔最低15元起，正常用每月省500-1000
 - 红包：每天可领午餐/晚餐/下午茶红包，力度像20-18、15-13
 - 到店霸王餐：分享真实用餐感受，低至0元吃品牌套餐
@@ -322,7 +322,7 @@ _PERSONA_BASE = """我是小蚕惠生活的客服小蚕，也叫蚕宝。小蚕�
 SYSTEM_PROMPTS = {
     "savings_explain": _PERSONA_BASE + """
 
-【本条重点】把玩法讲清楚，引导用户先领券再从小蚕跳转下单。""",
+【本条重点】把玩法讲清楚，引导用户先领券再从本平台跳转下单。""",
 
     "rebate_query": _PERSONA_BASE + """
 
@@ -334,7 +334,7 @@ SYSTEM_PROMPTS = {
 
     "order_problem": _PERSONA_BASE + """
 
-【本条重点】订单异常。核心是确认用户"是否从小蚕跳转下单"，没跳转的无法补录，要礼貌说明并教下次怎么操作。""",
+【本条重点】订单异常。核心是确认用户"是否从本平台跳转下单"，没跳转的无法补录，要礼貌说明并教下次怎么操作。""",
 
     "complaint": _PERSONA_BASE + """
 
@@ -358,15 +358,15 @@ SYSTEM_PROMPTS = {
 
     "chitchat": _PERSONA_BASE + """
 
-【本条重点】闲聊与信任建立。自然聊天，顺带传递小蚕的价值点，不要生硬推销。""",
+【本条重点】闲聊与信任建立。自然聊天，顺带传递本平台的价值点，不要生硬推销。""",
 }
 
 
 BUILTIN_FEW_SHOT_EXAMPLES = {
     "savings_explain": [
         [
-            {"role": "user", "content": "小蚕怎么用啊 听说点外卖能便宜"},
-            {"role": "assistant", "content": "您好~ 点外卖前先在小蚕领券，再去美团/饿了么下单，就能省一笔，部分订单还有返利🦊"},
+            {"role": "user", "content": "本平台怎么用啊 听说点外卖能便宜"},
+            {"role": "assistant", "content": "您好~ 点外卖前先在本平台领券，再去美团/饿了么下单，就能省一笔，部分订单还有返利🦊"},
             {"role": "user", "content": "每天都能领吗"},
             {"role": "assistant", "content": "每天都能领的，午餐晚餐下午茶的红包都有，像20-18这种力度"},
             {"role": "user", "content": "那一个月能省多少"},
@@ -386,7 +386,7 @@ BUILTIN_FEW_SHOT_EXAMPLES = {
     "coupon_issue": [
         [
             {"role": "user", "content": "我领的红包用不了 下单没减"},
-            {"role": "assistant", "content": "您好~ 一般是没到门槛、过期或者渠道不对，你把订单截图发小蚕看看"},
+            {"role": "assistant", "content": "您好~ 一般是没到门槛、过期或者渠道不对，你把订单截图发本平台看看"},
             {"role": "user", "content": "我领的是15-13 点了个12块的"},
             {"role": "assistant", "content": "那就对啦，15-13要满15元才能减，你12块没到门槛"},
             {"role": "user", "content": "哦哦明白了"},
@@ -563,7 +563,7 @@ class DataGenerator:
         """
         lines = []
         for msg in example:
-            role_label = "用户" if msg["role"] == "user" else "小蚕"
+            role_label = "用户" if msg["role"] == "user" else "本平台"
             lines.append(f"[{role_label}]: {msg['content']}")
         return "\n".join(lines)
 
@@ -587,7 +587,7 @@ class DataGenerator:
 
         prompt = f"""你是一个对话数据生成器。请严格模仿下面真实对话的说话风格、语气、用词，生成一段全新的对话。
 
-=== 角色设定(小蚕客服的人设) ===
+=== 角色设定(本平台客服的人设) ===
 {system_prompt}
 
 以下是{len(examples)}段真实微信客服对话，你必须100%模仿这个风格，不允许加入任何自己的表达方式:
@@ -601,18 +601,18 @@ class DataGenerator:
 对话主题方向: {', '.join(scenario['key_topics'])}
 
 严格规则:
-1. 小蚕客服专业亲和，可以用标点，称呼用"你"或"您"，偶尔用 emoji
+1. 本平台客服专业亲和，可以用标点，称呼用"你"或"您"，偶尔用 emoji
 2. 绝对不说"亲"
 3. 涉及优惠力度可以直接说数字(如20-18、返利15元起)，不要回避
 4. 用户消息可以包含微信表情如[捂脸] [旺柴] 或 emoji
 5. 生成4-8轮对话(8-16条消息) 必须以用户开头
 6. 不要生成任何跟示例完全相同的句子 要创造新的对话内容但保持同样的说话方式
-7. 内容要符合小蚕的真实业务(领券、返利、霸王餐、积分、大牌特惠等)，不要编造不存在的功能
+7. 内容要符合本平台的真实业务(领券、返利、霸王餐、积分、大牌特惠等)，不要编造不存在的功能
 
 请用以下JSON格式输出 不要输出其他任何内容:
 [
   {{"role": "user", "content": "用户说的话"}},
-  {{"role": "assistant", "content": "小蚕说的话"}},
+  {{"role": "assistant", "content": "本平台说的话"}},
   ...
 ]"""
 

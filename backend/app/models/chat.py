@@ -18,7 +18,7 @@ class LabelStatus(str, enum.Enum):
 
 
 class DataCategory(str, enum.Enum):
-    """数据分类 - 小蚕惠生活客服场景"""
+    """数据分类 - 本平台客服场景"""
     SAVINGS_EXPLAIN = "savings_explain"   # 省钱讲解
     REBATE_QUERY = "rebate_query"         # 返利查询
     COUPON_ISSUE = "coupon_issue"         # 优惠券问题
@@ -70,6 +70,8 @@ class Session(Base):
     last_message = Column(Text)  # 最后一条消息
     last_time = Column(BigInteger)  # 最后消息时间戳
     message_count = Column(Integer, default=0)  # 消息数量
+    # 来源标记：wx_etl=微信导入（默认） / agent_service=智能客服会话关闭后推送
+    push_source = Column(String(20), default='wx_etl', index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -101,7 +103,10 @@ class RawChat(Base):
     auto_flags = Column(JSONB if HAS_PGVECTOR else JSON)  # 自动标记 {sensitive, junk, incomplete, ...}
     reviewed_by = Column(String(100))  # 审核人
     reviewed_at = Column(DateTime)  # 审核时间
-    
+
+    # 来源标记：wx_etl=微信导入（默认） / agent_service=智能客服会话关闭后推送
+    push_source = Column(String(20), default='wx_etl', index=True)
+
     # 复合索引，优化按会话+时间查询
     __table_args__ = (
         Index('idx_session_timestamp', 'session_id', 'timestamp'),

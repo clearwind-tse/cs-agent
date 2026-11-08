@@ -13,7 +13,7 @@ from datetime import datetime
 from app.models.database import get_db
 from app.models.chat import Quiz, QuizAttempt
 from app.services.quiz import generate_quiz_questions, ai_grade_answers
-from app.services.xiaocan_persona import CATEGORY_LABELS
+from app.services.benpingtai_persona import CATEGORY_LABELS
 
 router = APIRouter(prefix="/api/quiz", tags=["quiz"])
 
@@ -46,7 +46,7 @@ def generate_quiz(req: GenerateQuizRequest, db: DBSession = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"出题失败: {str(e)}")
 
     cat_labels = CATEGORY_LABELS
-    title = req.title or f"{cat_labels.get(req.category, '小蚕客服')}\u8003\u6838 #{db.query(func.count(Quiz.id)).scalar() + 1}"
+    title = req.title or f"{cat_labels.get(req.category, '本平台客服')}\u8003\u6838 #{db.query(func.count(Quiz.id)).scalar() + 1}"
 
     quiz = Quiz(
         title=title,

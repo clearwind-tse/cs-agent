@@ -42,13 +42,13 @@ class DataFilter:
         r'^@\S+\s*$',                          # 纯@某人
     ]
     
-    # 垃圾/广告关键词（注意：小蚕客服场景下，部分词汇可能是正常内容）
+    # 垃圾/广告关键词（注意：本平台客服场景下，部分词汇可能是正常内容）
     SPAM_KEYWORDS = [
         '兼职', '日赚', '月入', '躺赚', '刷单', '博彩', '赌',
-        # 注意：'返利'、'优惠券'、'红包'、'扫码' 在小蚕场景是正常用语，不过滤
+        # 注意：'返利'、'优惠券'、'红包'、'扫码' 在本平台场景是正常用语，不过滤
     ]
     
-    # 小蚕场景高价值关键词（优先保留这些内容）
+    # 本平台场景高价值关键词（优先保留这些内容）
     SALES_VALUABLE_KEYWORDS = [
         # 价格/优惠
         '红包', '优惠', '折扣', '活动', '限时', '福利', '力度', '券',
@@ -112,7 +112,7 @@ class DataFilter:
             if pattern.match(content):
                 return ContentCategory.CHITCHAT
         
-        # 7. 优先检查小蚕高价值关键词
+        # 7. 优先检查本平台高价值关键词
         content_lower = content.lower()
         for keyword in self.SALES_VALUABLE_KEYWORDS:
             if keyword in content_lower:
@@ -240,15 +240,15 @@ class LLMContentClassifier:
     """
     使用 LLM 进行内容分类
     更精准但速度较慢，适合高质量数据筛选
-    针对小蚕惠生活客服场景优化
+    针对本平台客服场景优化
     """
     
-    CLASSIFICATION_PROMPT = """请对以下小蚕惠生活客服聊天内容进行分类。
+    CLASSIFICATION_PROMPT = """请对以下本平台客服聊天内容进行分类。
 
 聊天内容：
 {content}
 
-请判断这段对话属于以下哪个类别（小蚕惠生活·本地生活平台客服场景）：
+请判断这段对话属于以下哪个类别（本平台·本地生活平台客服场景）：
 1. savings_explain - 省钱讲解（外卖红包、返利规则、怎么点更省）
 2. rebate_query - 返利查询（返利到账、金额核对、返利异常）
 3. coupon_issue - 优惠券问题（领券、用券、券过期、门槛）

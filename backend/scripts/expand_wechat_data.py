@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-LLM 扩量脚本：把小蚕微信模拟数据从种子量补到目标量。
+LLM 扩量脚本：把本平台微信模拟数据从种子量补到目标量。
 
 复用 app.services.data_generator.DataGenerator（DeepSeek），
-生成小蚕客服对话并展开为微信 MSG 行，追加写入 Msg/Msg/Multi/MSG0.db。
+生成本平台客服对话并展开为微信 MSG 行，追加写入 Msg/Msg/Multi/MSG0.db。
 
 用法：
     cd backend
@@ -27,7 +27,7 @@ DEFAULT_MSG_ROOT = os.path.abspath(
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="小蚕微信模拟数据 LLM 扩量")
+    parser = argparse.ArgumentParser(description="本平台微信模拟数据 LLM 扩量")
     parser.add_argument("--target", type=int, default=300, help="目标消息总数（默认 300）")
     parser.add_argument("--msg-root", default=DEFAULT_MSG_ROOT, help="微信数据根目录")
     parser.add_argument("--max-attempts", type=int, default=60, help="最大 LLM 调用次数上限")
@@ -112,7 +112,7 @@ def main():
         raise SystemExit(f"找不到消息库: {msg_db}（请先运行 scripts/generate_fake_data.py）")
 
     print("=" * 60)
-    print("小蚕微信模拟数据 LLM 扩量")
+    print("本平台微信模拟数据 LLM 扩量")
     print(f"消息库: {msg_db}")
     print("=" * 60)
 

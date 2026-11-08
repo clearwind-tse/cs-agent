@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     api_port: int = 8000
     debug: bool = True
     app_env: str = "dev"       # dev / prod，区分本地和线上环境
+
+    # 自动流水线：智能客服会话关闭推送进 raw_chats 后，是否自动跑 清洗→质检→知识提炼
+    auto_pipeline_on_push: bool = True
     
     class Config:
         env_file = ".env"

@@ -18,7 +18,12 @@ from app.models.agent_config import AgentConfig, IntentRecord, EmotionRecord, Tr
 from app.models.ticket import Ticket  # noqa: F401  工单表
 from app.models.dpo import DpoPreferencePair, SftTrainingSample, TrainingJob  # noqa: F401  DPO训练数据模型
 from app.routers import chats, search, knowledge, export, filter, labeling, admin, custom, auth, extractor, quiz, cs_quality, qc_calibration, dialogue, agent, ticket, skills, mcp, training  # noqa: F401
-from app.services.schema_sync import ensure_legacy_raw_chat_schema, ensure_ticket_schema
+from app.services.schema_sync import (
+    ensure_legacy_raw_chat_schema,
+    ensure_ticket_schema,
+    ensure_session_schema,
+    ensure_agent_session_schema,
+)
 from app.services.agent_initializer import load_all_agents_from_db
 from app.models.database import get_session_local
 
@@ -48,6 +53,12 @@ async def lifespan(app: FastAPI):
         added_ticket_cols = ensure_ticket_schema(engine)
         if added_ticket_cols:
             print(f"[INFO] Patched legacy tickets columns: {', '.join(added_ticket_cols)}")
+        added_session_cols = ensure_session_schema(engine)
+        if added_session_cols:
+            print(f"[INFO] Patched legacy sessions columns: {', '.join(added_session_cols)}")
+        added_agent_cols = ensure_agent_session_schema(engine)
+        if added_agent_cols:
+            print(f"[INFO] Patched legacy agent_sessions columns: {', '.join(added_agent_cols)}")
         print("[INFO] Database tables ready")
     except Exception as e:
         print(f"[WARN] Database init failed: {e}")

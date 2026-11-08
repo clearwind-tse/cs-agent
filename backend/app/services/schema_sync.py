@@ -13,6 +13,7 @@ def get_missing_raw_chat_columns(existing_columns: Iterable[str]) -> list[tuple[
     required_columns = [
         ('msg_server_id', 'BIGINT'),
         ('voice_path', 'VARCHAR(300)'),
+        ('push_source', 'VARCHAR(20)'),
     ]
     return [(name, column_type) for name, column_type in required_columns if name not in existing]
 
@@ -45,6 +46,40 @@ def ensure_legacy_raw_chat_schema(engine) -> list[str]:
             conn.commit()
 
     return added_columns
+
+
+def _add_missing_columns(engine, table: str, required: list[tuple[str, str]]) -> list[str]:
+    """通用：为指定表补齐缺失列，返回新增列名。"""
+    inspector = inspect(engine)
+    if table not in inspector.get_table_names():
+        return []
+    existing = {col['name'] for col in inspector.get_columns(table)}
+    missing = [(n, t) for n, t in required if n not in existing]
+    if not missing:
+        return []
+    added: list[str] = []
+    with engine.connect() as conn:
+        for name, ctype in missing:
+            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ctype}"))
+            added.append(name)
+        conn.commit()
+    return added
+
+
+def ensure_session_schema(engine) -> list[str]:
+    """为旧版 sessions 表补齐 push_source（来源标记）。"""
+    return _add_missing_columns(
+        engine, 'sessions',
+        [('push_source', 'VARCHAR(20)')],
+    )
+
+
+def ensure_agent_session_schema(engine) -> list[str]:
+    """为旧版 agent_sessions 表补齐生命周期字段 status / closed_at。"""
+    return _add_missing_columns(
+        engine, 'agent_sessions',
+        [('status', 'VARCHAR(20)'), ('closed_at', 'TIMESTAMP')],
+    )
 
 
 def ensure_ticket_schema(engine) -> list[str]:

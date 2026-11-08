@@ -14,7 +14,7 @@ from sqlalchemy import func
 
 from app.config import get_settings
 from app.models.chat import (
-    KnowledgeChunk, KnowledgeArticle, StagingConversation, HAS_PGVECTOR,
+    KnowledgeChunk, KnowledgeArticle, StagingConversation, RawChat, HAS_PGVECTOR,
 )
 from app.services.embedding import get_embedding_service
 
@@ -94,6 +94,41 @@ class KnowledgeExtractor:
                 source_chunk_id=None,
                 source_session_id=staging.session_id,
                 source_type='labeled',
+            )
+            if article:
+                saved.append(article)
+
+        if saved:
+            self.db.commit()
+        return saved
+
+    def extract_from_raw_session(self, session_id: str) -> List[KnowledgeArticle]:
+        """从某个原始会话（raw_chats）直接提炼知识条目，并溯源到该会话。"""
+        messages = (
+            self.db.query(RawChat)
+            .filter(RawChat.session_id == session_id)
+            .order_by(RawChat.timestamp)
+            .all()
+        )
+        if not messages:
+            return []
+
+        text = "\n".join(
+            f"{'本平台' if m.is_sender else '客户'}: {m.content}"
+            for m in messages
+            if (m.content or '').strip()
+        )
+        if not text.strip():
+            return []
+
+        items = self._call_llm_extract(text)
+        saved = []
+        for item in items:
+            article = self._save_article(
+                item,
+                source_chunk_id=None,
+                source_session_id=session_id,
+                source_type='chat',
             )
             if article:
                 saved.append(article)
