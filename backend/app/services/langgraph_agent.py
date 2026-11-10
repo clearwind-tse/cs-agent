@@ -139,9 +139,9 @@ def _tool_to_openai_schema(tool) -> Dict[str, Any]:
 
 
 def _get_llm_client():
-    """复用项目统一的 LLM 客户端（DeepSeek / OpenAI 兼容）"""
+    """复用项目统一的 LLM 客户端；Agent 编排使用 agent 板块的模型"""
     from app.services.quiz import _get_llm_client as _g
-    return _g()
+    return _g("agent")
 
 
 # ==================== 共享服务（懒加载，全局唯一） ====================

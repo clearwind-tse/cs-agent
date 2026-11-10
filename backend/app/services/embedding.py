@@ -15,19 +15,21 @@ class EmbeddingService:
     """Embedding 服务（云端 DashScope API）"""
 
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
-        """批量生成文本向量"""
+        """批量生成文本向量；模型取设置页「文本向量化」板块"""
         if not texts:
             return []
 
-        if not settings.ark_api_key or not settings.ark_embedding_model:
+        from app.services.model_registry import resolve
+        r = resolve("embedding")
+        if not r.configured or not r.model:
             raise RuntimeError(
-                "未配置云端 Embedding API，请设置 ARK_API_KEY 和 ARK_EMBEDDING_MODEL"
+                "未配置 Embedding API：请在 .env 设置 ARK_API_KEY / ARK_BASE_URL，"
+                "并在设置页选择 Embedding 模型"
             )
 
-        base_url = settings.ark_base_url.rstrip('/')
-        url = f"{base_url}/embeddings"
+        url = f"{r.base_url.rstrip('/')}/embeddings"
         headers = {
-            "Authorization": f"Bearer {settings.ark_api_key}",
+            "Authorization": f"Bearer {r.api_key}",
             "Content-Type": "application/json",
         }
 
@@ -36,7 +38,7 @@ class EmbeddingService:
         for i in range(0, len(texts), batch_size):
             batch = texts[i:i + batch_size]
             payload = {
-                "model": settings.ark_embedding_model,
+                "model": r.model,
                 "input": batch,
             }
 
@@ -53,7 +55,7 @@ class EmbeddingService:
 
             if i == 0:
                 dim = len(batch_embeddings[0])
-                print(f"[INFO] Using Cloud Embedding (model={settings.ark_embedding_model}, dim={dim})")
+                print(f"[INFO] Using Cloud Embedding (model={r.model}, dim={dim})")
 
         return all_embeddings
 

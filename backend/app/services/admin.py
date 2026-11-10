@@ -25,7 +25,9 @@ class AdminService:
     
     def __init__(self):
         self.data_filter = get_data_filter()
-        self.quality_scorer = LLMQualityScorer() if (settings.deepseek_api_key or settings.openai_api_key) else None
+        # 是否启用 LLM 质量评分，跟设置页「质检与质量评分」板块的实际可用性保持一致
+        from app.services.model_registry import resolve
+        self.quality_scorer = LLMQualityScorer() if resolve("qc").configured else None
     
     def preprocess_session(self, db_session, session_id: str, 
                           window_seconds: int = 300) -> int:

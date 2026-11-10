@@ -216,3 +216,7 @@ Msg
 vite.config.ts.timestamp-*
 # 视觉回归截图（本地生成，不入库）
 frontend/.visual-regression/
+
+# ==================== 上传的媒体文件 ====================
+# 素材库落本地磁盘（backend/data/media），不入仓库
+backend/data/media/

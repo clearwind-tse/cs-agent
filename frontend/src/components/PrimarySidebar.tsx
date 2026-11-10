@@ -4,7 +4,7 @@
  *
  * 交互重设计：
  * - 原来 9 个一级入口平铺，在线服务 / 离线数据混在一起，只能靠图标猜位置。
- * - 现在窄条只放「3 个工作区 + 当前工作区的功能 + 全局工具」；完整功能分布、
+ * - 现在窄条只放「4 个工作区 + 当前工作区的功能 + 全局工具」；完整功能分布、
  *   业务链路步骤、跨链路入口都在可展开的玻璃导航面板里。
  * - 面板聚焦哪个工作区与当前页面所在工作区是两件事：点工作区按钮只展开菜单，
  *   不偷偷换页；真正跳转必须点具体功能，避免误触丢失当前上下文。
@@ -23,7 +23,7 @@ import {
   User,
   X,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { cn } from '../utils'
 import { useAuth } from '../contexts/AuthContext'
@@ -35,16 +35,17 @@ import {
   OVERVIEW_ITEM,
   WORKSPACES,
   getNavItem,
+  getStudioGroup,
   getWorkspace,
   type NavItem,
   type WorkspaceId,
 } from '../navigation'
-import type { AgentPane } from '../appRoutes'
+import type { AgentPane, StudioPane } from '../appRoutes'
 import { getBrowserStorage, readAutoCollapse, writeAutoCollapse } from '../navigationPref'
 
 interface PrimarySidebarProps {
   currentView: string
-  currentPane?: AgentPane | null
+  currentPane?: AgentPane | StudioPane | null
   onOpenChat: () => void
   onOpenSearch: () => void
   onOpenAI: () => void
@@ -78,9 +79,19 @@ export default function PrimarySidebar(props: PrimarySidebarProps) {
   const OverviewIcon = OVERVIEW_ITEM.icon
   const activeItem = getNavItem(view, props.currentPane)
   const activeWorkspace = getWorkspace(view, props.currentPane)
-  const panelWorkspace = WORKSPACES.find((w) => w.id === (focusedWorkspace ?? activeWorkspace.id)) ?? activeWorkspace
+  /** 全局入口（工作台 / 看板 / 全局工具）不归属任何工作区，面板默认停在第一条链路 */
+  const isGlobalEntry = view === 'overview' || view === 'ai' || view === 'search'
+  const panelDefaultWorkspaceId = isGlobalEntry ? WORKSPACES[0].id : activeWorkspace.id
+  const panelWorkspace = WORKSPACES.find((w) => w.id === (focusedWorkspace ?? panelDefaultWorkspaceId)) ?? activeWorkspace
   /** 常驻面板只在宽屏停靠；窄屏保持浮层，避免把内容区挤没 */
   const docked = expanded && !autoCollapse && isWide
+  /**
+   * 窄条高度预算只够 5 个功能入口（与 02 数据治理的实际占用对齐）。
+   * AI 创作有 8 个功能，多出的走展开面板与页内切换条，避免把底部全局工具挤出屏幕。
+   */
+  const railItems = isOverview
+    ? WORKSPACES.map((workspace) => workspace.items[0])
+    : activeWorkspace.items.slice(0, 5)
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
@@ -112,7 +123,7 @@ export default function PrimarySidebar(props: PrimarySidebarProps) {
   const selectItem = (item: NavItem) => {
     // 关闭自动折叠后面板保持展开，方便连续切换功能；显式关闭依然随时可用
     if (autoCollapse) setExpanded(false)
-    const isGlobalTool = item.view === 'ai' || item.view === 'search' || item.view === 'overview'
+    const isGlobalTool = item.view === 'ai' || item.view === 'search' || item.view === 'overview' || item.view === 'settings'
     setFocusedWorkspace(isGlobalTool ? activeWorkspace.id : getWorkspace(item.view, item.pane).id)
 
     if (item.view === 'chat') {
@@ -187,7 +198,7 @@ export default function PrimarySidebar(props: PrimarySidebarProps) {
         <button
           type="button"
           onClick={() => {
-            setFocusedWorkspace(activeWorkspace.id)
+            setFocusedWorkspace(isGlobalEntry ? WORKSPACES[0].id : activeWorkspace.id)
             setExpanded((value) => !value)
           }}
           aria-expanded={expanded}
@@ -201,7 +212,7 @@ export default function PrimarySidebar(props: PrimarySidebarProps) {
           {expanded ? <X size={20} /> : <ChevronRight size={20} />}
         </button>
 
-        {/* 全局数据看板：跨三条链路，不归属任何工作区 */}
+        {/* 全局总览：待办 + 统计，跨三条链路，不归属任何工作区 */}
         <NavButton
           icon={OVERVIEW_ITEM.icon}
           label={OVERVIEW_ITEM.label}
@@ -231,9 +242,15 @@ export default function PrimarySidebar(props: PrimarySidebarProps) {
 
         <div className="w-8 h-px bg-line/70 flex-shrink-0" />
 
-        {/* 当前工作区的功能入口；总览页给三条链路的首项，方便直接下钻 */}
-        <div className="flex flex-col items-center gap-2 w-full flex-shrink-0">
-          {(isOverview ? WORKSPACES.map((workspace) => workspace.items[0]) : activeWorkspace.items).map((item) => (
+        {/**
+          * 功能入口区：自己吃掉剩余高度并允许滚动。
+          * 原来这里是 flex-shrink-0 + 一个 flex-1 占位，窗口不够高时（900px 常见笔记本）
+          * 底部全局工具与账户会被挤出视口——900px 下实测溢出 67px，AI 创作 8 个功能更多。
+          * 改成可滚动后，工具区永远可见，功能多时只滚功能本身。
+          * 滚动条隐藏：80px 宽的窄条放条形滚动条会把图标挤歪，滚动仍可用（滚轮 / 触控板）。
+          */}
+        <div className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden flex flex-col items-center gap-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {railItems.map((item) => (
             <NavButton
               key={item.id}
               icon={item.icon}
@@ -243,8 +260,6 @@ export default function PrimarySidebar(props: PrimarySidebarProps) {
             />
           ))}
         </div>
-
-        <div className="flex-1" />
 
         {/* 全局工具 + 主题 + 账户 */}
         <div className="flex flex-col items-center gap-2 w-full pb-2 flex-shrink-0">
@@ -371,7 +386,7 @@ export default function PrimarySidebar(props: PrimarySidebarProps) {
               </header>
 
               <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
-                {/* 全局数据看板：跨链路汇总入口 */}
+                {/* 全局总览：待办 + 统计 */}
                 <button
                   type="button"
                   onClick={() => selectItem(OVERVIEW_ITEM)}
@@ -459,28 +474,37 @@ export default function PrimarySidebar(props: PrimarySidebarProps) {
                           {workspace.items.map((item) => {
                             const active = item.id === activeItem.id
                             const ItemIcon = item.icon
+                            // AI 创作的并列目标按组分段，别在功能地图里排成一条假流水线
+                            const group = workspace.id === 'studio' ? getStudioGroup(item.id) : undefined
+                            const firstInGroup = Boolean(group && group.itemIds[0] === item.id)
                             return (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => selectItem(item)}
-                                aria-current={active ? 'page' : undefined}
-                                className={cn(
-                                  'w-full flex items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors',
-                                  active ? 'bg-iris/15' : 'hover:bg-panel-2/50',
+                              <Fragment key={item.id}>
+                                {group && firstInGroup && (
+                                  <p className="px-2.5 pt-2.5 pb-1 font-mono text-[9px] tracking-wide text-ink-subtle">
+                                    {group.label}
+                                  </p>
                                 )}
-                              >
-                                <ItemIcon size={15} className={cn('mt-0.5 flex-shrink-0', active ? 'text-iris' : 'text-ink-subtle')} />
-                                <span className="min-w-0 flex-1">
-                                  <span className={cn('block text-[13px]', active ? 'text-ink font-medium' : 'text-ink-muted')}>{item.label}</span>
-                                  <span className="block text-[10px] text-ink-subtle leading-relaxed">{item.desc}</span>
-                                  {item.steps && (
-                                    <span className="block font-mono text-[9px] text-ink-subtle mt-1 truncate">
-                                      {item.steps.join(' → ')}
-                                    </span>
+                                <button
+                                  type="button"
+                                  onClick={() => selectItem(item)}
+                                  aria-current={active ? 'page' : undefined}
+                                  className={cn(
+                                    'w-full flex items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors',
+                                    active ? 'bg-iris/15' : 'hover:bg-panel-2/50',
                                   )}
-                                </span>
-                              </button>
+                                >
+                                  <ItemIcon size={15} className={cn('mt-0.5 flex-shrink-0', active ? 'text-iris' : 'text-ink-subtle')} />
+                                  <span className="min-w-0 flex-1">
+                                    <span className={cn('block text-[13px]', active ? 'text-ink font-medium' : 'text-ink-muted')}>{item.label}</span>
+                                    <span className="block text-[10px] text-ink-subtle leading-relaxed">{item.desc}</span>
+                                    {item.steps && (
+                                      <span className="block font-mono text-[9px] text-ink-subtle mt-1 truncate">
+                                        {item.steps.join(' → ')}
+                                      </span>
+                                    )}
+                                  </span>
+                                </button>
+                              </Fragment>
                             )
                           })}
                         </div>
@@ -541,7 +565,8 @@ export default function PrimarySidebar(props: PrimarySidebarProps) {
                   </span>
                 </button>
                 <p className="font-mono text-[10px] text-ink-subtle truncate mt-1 px-2.5">
-                  当前 · {activeWorkspace.index} {activeWorkspace.label} / {activeItem.label}
+                  当前 · {isGlobalEntry ? '全局' : `${activeWorkspace.index} ${activeWorkspace.label}`} /{' '}
+                  {activeItem.label}
                 </p>
               </footer>
             </motion.aside>

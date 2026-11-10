@@ -20,20 +20,14 @@ from app.services.benpingtai_persona import (
 settings = get_settings()
 
 
-def _get_llm_client():
-    """获取 LLM 客户端"""
-    from openai import OpenAI
-    if settings.deepseek_api_key:
-        return OpenAI(
-            api_key=settings.deepseek_api_key,
-            base_url=settings.deepseek_base_url,
-        ), "deepseek-chat"
-    if settings.openai_api_key:
-        return OpenAI(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_base_url,
-        ), "gpt-4o-mini"
-    return None, None
+def _get_llm_client(slot: str = "quiz"):
+    """取 LLM 客户端。
+
+    slot 决定用设置页里哪个板块的模型；本项目多个服务复用这个函数，
+    调用方显式传自己的板块，避免「改了在线对话模型，考核也跟着变」。
+    """
+    from app.services.model_registry import openai_client
+    return openai_client(slot)
 
 
 def _load_knowledge_context(db: DBSession, category: Optional[str] = None, limit: int = 30) -> str:

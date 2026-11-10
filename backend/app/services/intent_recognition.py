@@ -231,7 +231,7 @@ class IntentRecognitionService:
                       hint: Optional[str] = None) -> IntentResult:
         """LLM精判（hint 为词典初筛的先验，帮助模型消歧）"""
         from app.services.quiz import _get_llm_client
-        client, model = _get_llm_client()
+        client, model = _get_llm_client("chat")
         if client is None:
             return IntentResult(
                 intent=hint or "general_faq", confidence=0.5,

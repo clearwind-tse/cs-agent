@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工作台 · Picset OSS 原型</title>
+<style>
+:root{
+  --bg:#f7f6f3; --panel:#ffffff; --panel2:#fbfaf8;
+  --ink:#1a1a1a; --ink2:#4a4a4a; --ink3:#7c7c7c;
+  --line:#e7e4de; --line2:#f1efe9;
+  --accent:#0d6f63; --accent-2:#0a5a50; --accent-soft:#e6f2ef;
+  --warn:#a15c00; --warn-soft:#fdf3e0;
+  --bad:#a8321b; --bad-soft:#fcece8;
+  --radius:12px; --shadow:0 1px 2px rgba(26,26,26,.04),0 8px 24px -12px rgba(26,26,26,.10);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,sans-serif;
+}
+html[data-theme="dark"]{
+  --bg:#111211; --panel:#191a19; --panel2:#1f201f;
+  --ink:#f2f1ee; --ink2:#c3c1bc; --ink3:#8e8b85;
+  --line:#2b2c2b; --line2:#232423;
+  --accent:#4bbfae; --accent-2:#6fd3c3; --accent-soft:#14312d;
+  --warn:#e0a458; --warn-soft:#2e2415;
+  --bad:#e0745b; --bad-soft:#2f1a15;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 32px -16px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+svg{display:block}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+@media(max-width:1080px){.app{grid-template-columns:76px 1fr}}
+
+.side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px}
+.brand .logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(140deg,var(--accent),#14897a);display:grid;place-items:center;color:#fff;flex:none}
+.brand b{font-size:14.5px;letter-spacing:-.01em;white-space:nowrap}
+.brand span{font:11px/1 var(--mono);color:var(--ink3);border:1px solid var(--line);padding:3px 5px;border-radius:5px;white-space:nowrap}
+@media(max-width:1080px){.brand b,.brand span{display:none}.brand{justify-content:center;padding:18px 0 10px}}
+
+.nav{flex:1;overflow-y:auto;padding:6px 10px 10px}
+.nav .grp{font:600 10.5px/1 var(--mono);letter-spacing:.12em;color:var(--ink3);padding:16px 10px 8px}
+.nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;color:var(--ink2);margin-bottom:2px;position:relative}
+.nav a:hover{background:var(--panel2);color:var(--ink)}
+.nav a.on{background:var(--accent-soft);color:var(--accent-2);font-weight:600}
+.nav a.on::before{content:"";position:absolute;left:-10px;top:9px;bottom:9px;width:2px;border-radius:2px;background:var(--accent)}
+.nav a .ico{width:18px;height:18px;flex:none;opacity:.85}
+.nav a .tag{margin-left:auto;font:10px/1 var(--mono);background:var(--panel2);border:1px solid var(--line);color:var(--ink3);padding:3px 5px;border-radius:4px}
+@media(max-width:1080px){.nav a{justify-content:center;padding:11px 0}.nav a span.lbl,.nav a .tag{display:none}}
+
+.side-foot{border-top:1px solid var(--line);padding:12px}
+.quota-mini{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.quota-mini .row{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;color:var(--ink3)}
+.quota-mini b{font:600 15px/1.2 var(--mono);color:var(--ink)}
+.bar{height:5px;border-radius:3px;background:var(--line2);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;border-radius:3px;background:var(--accent);transition:width .4s}
+.quota-mini.warn i{background:var(--warn)}
+.side-actions{display:flex;gap:6px;margin-top:10px}
+.icon-btn{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--ink3);border:1px solid transparent}
+.icon-btn:hover{background:var(--panel2);color:var(--ink);border-color:var(--line)}
+@media(max-width:1080px){.quota-mini{display:none}.side-actions{justify-content:center}}
+
+/* ---------- main ---------- */
+.main{min-width:0;padding:26px 32px 80px}
+@media(max-width:720px){.main{padding:18px 16px 70px}}
+.top{display:flex;align-items:flex-start;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+.top h1{font-size:23px;line-height:1.3;letter-spacing:-.015em;margin:0 0 4px;font-weight:750}
+.top p{margin:0;color:var(--ink3);font-size:13px}
+.top .sp{flex:1}
+.search{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:0 10px;height:36px;min-width:200px;color:var(--ink3)}
+.search input{border:none;background:none;outline:none;font:13px var(--sans);color:var(--ink);width:100%}
+.search input::placeholder{color:var(--ink3)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;border-radius:9px;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--panel);color:var(--ink);white-space:nowrap;transition:.15s}
+.btn:hover{border-color:#d5d1c9;transform:translateY(-1px)}
+html[data-theme="dark"] .btn:hover{border-color:#3a3b3a}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
+html[data-theme="dark"] .btn.primary{color:#06201d}
+.btn.ghost{border-color:transparent;background:none;color:var(--ink2)}
+.btn.ghost:hover{background:var(--panel2)}
+.btn.sm{height:30px;padding:0 10px;font-size:12px;border-radius:8px}
+.btn[disabled]{opacity:.5;pointer-events:none}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px}
+@media(max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.kpis{grid-template-columns:1fr}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .lbl{font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:6px}
+.kpi .val{font:700 24px/1.2 var(--mono);letter-spacing:-.02em;margin:6px 0 2px}
+.kpi .val small{font-size:12px;font-weight:500;color:var(--ink3);margin-left:3px}
+.kpi .sub{font-size:11.5px;color:var(--ink3)}
+.kpi .bar{margin-top:10px}
+
+/* section head */
+.sec-head{display:flex;align-items:baseline;gap:10px;margin:0 0 12px}
+.sec-head h2{font-size:15.5px;margin:0;font-weight:700;letter-spacing:-.01em}
+.sec-head span{font-size:12px;color:var(--ink3)}
+.sec-head .sp{flex:1}
+
+/* quick start */
+.notice{display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;margin:0 0 14px;border:1px solid var(--warn);background:var(--warn-soft);border-radius:10px;font-size:12.5px;line-height:1.5}
+.notice.show{display:flex}
+.notice b{color:var(--warn);font-weight:700}
+.notice span{color:var(--ink2);flex:1;min-width:220px}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px}
+@media(max-width:1080px){.quick{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.quick{grid-template-columns:1fr}}
+.qcard{position:relative;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;transition:.18s;overflow:hidden}
+.qcard:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+.qcard .qi{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-2);margin-bottom:12px}
+.qcard h3{font-size:14px;margin:0 0 4px;font-weight:700}
+.qcard p{margin:0;font-size:12.5px;color:var(--ink3);line-height:1.55}
+.qcard .badge{position:absolute;top:14px;right:14px;font:10px/1 var(--mono);background:var(--warn-soft);color:var(--warn);padding:4px 6px;border-radius:5px}
+.qcard .go{position:absolute;right:14px;bottom:14px;color:var(--ink3);opacity:0;transform:translateX(-4px);transition:.18s}
+.qcard:hover .go{opacity:1;transform:none;color:var(--accent)}
+
+/* two col */
+.cols{display:grid;grid-template-columns:1.35fr 1fr;gap:12px;margin-bottom:28px}
+@media(max-width:980px){.cols{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.panel .ph{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line2)}
+.panel .ph h3{font-size:13.5px;margin:0;font-weight:700}
+.panel .ph .sp{flex:1}
+.panel .pb{padding:6px 8px}
+
+.task{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:9px}
+.task:hover{background:var(--panel2)}
+.task .tb{width:38px;height:38px;border-radius:8px;flex:none;background-color:var(--line2);position:relative;overflow:hidden}
+.task .tb::after{content:"";position:absolute;inset:8px;border-radius:4px;background:rgba(255,255,255,.55)}
+.task .tinfo{min-width:0;flex:1}
+.task .tinfo b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.task .tinfo span{font-size:11.5px;color:var(--ink3)}
+.task .prog{width:112px;flex:none}
+.task .prog .bar{margin-top:0;height:4px}
+.task .prog em{display:block;font:11px/1.4 var(--mono);color:var(--ink3);font-style:normal;text-align:right;margin-top:4px}
+@media(max-width:520px){.task .prog{display:none}}
+
+/* quota panel */
+.qbox{padding:16px}
+.ring{display:flex;align-items:center;gap:16px}
+.ring svg{flex:none}
+.ring .rt b{display:block;font:700 20px/1.2 var(--mono);margin-bottom:2px}
+.ring .rt span{font-size:12px;color:var(--ink3)}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px dashed var(--line);font-size:12.5px}
+.kv:first-of-type{border-top:none}
+.kv span{color:var(--ink3)}
+.kv b{font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:3px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent-2);font-weight:600}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+
+/* recent works */
+.works{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:1080px){.works{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:640px){.works{grid-template-columns:repeat(2,1fr)}}
+.work{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;transition:.18s;position:relative}
+.work:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:#d9d5cc}
+.work .art{aspect-ratio:1/1;position:relative;overflow:hidden}
+.work .art .meta{position:absolute;left:8px;bottom:8px;font:10px/1 var(--mono);color:#fff;background:rgba(0,0,0,.42);backdrop-filter:blur(4px);padding:4px 6px;border-radius:4px}
+.work .cap{padding:9px 10px;display:flex;align-items:center;gap:6px}
+.work .cap b{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.work .cap span{font-size:11px;color:var(--ink3);white-space:nowrap}
+.work .act{position:absolute;top:8px;right:8px;display:flex;gap:4px;opacity:0;transition:.15s}
+.work:hover .act{opacity:1}
+.work .act button{width:26px;height:26px;border-radius:6px;background:rgba(255,255,255,.9);color:#333;display:grid;place-items:center;backdrop-filter:blur(4px)}
+.work .act button:hover{background:#fff}
+
+/* generated art placeholders */
+.art-1{background:radial-gradient(120% 90% at 30% 20%,#f6e3d2 0%,#e9c9ad 45%,#c9a183 100%)}
+.art-2{background:radial-gradient(120% 90% at 70% 25%,#e5efe9 0%,#c9ded4 50%,#a8c6b8 100%)}
+.art-3{background:radial-gradient(120% 90% at 40% 30%,#e8e6f2 0%,#cfcae4 50%,#ada6c9 100%)}
+.art-4{background:radial-gradient(120% 90% at 60% 20%,#f7ecd6 0%,#ecd7b3 50%,#d3b98c 100%)}
+.art-5{background:radial-gradient(120% 90% at 35% 25%,#e3eef2 0%,#c3dae2 50%,#9dbec9 100%)}
+.art-6{background:radial-gradient(120% 90% at 65% 30%,#f2e4e6 0%,#e0c6ca 50%,#c6a3a8 100%)}
+.art-7{background:radial-gradient(120% 90% at 45% 20%,#eef0e4 0%,#d6dcc3 50%,#b6bf9d 100%)}
+.art-8{background:radial-gradient(120% 90% at 55% 25%,#eee8e0 0%,#d9d0c3 50%,#bcb1a1 100%)}
+.art-1::after,.art-2::after,.art-3::after,.art-4::after,.art-5::after,.art-6::after,.art-7::after,.art-8::after{
+  content:"";position:absolute;left:50%;top:56%;width:44%;height:56%;transform:translate(-50%,-50%) rotate(-6deg);
+  border-radius:22% 22% 26% 26%/16% 16% 40% 40%;
+  background:linear-gradient(160deg,rgba(255,255,255,.92),rgba(255,255,255,.55) 45%,rgba(255,255,255,.25));
+  box-shadow:0 14px 28px -14px rgba(80,60,40,.45), inset 0 1px 0 rgba(255,255,255,.9);
+}
+.art-2::after,.art-5::after{border-radius:14% 14% 8% 8%;width:36%;height:50%}
+.art-3::after{border-radius:50% 50% 46% 46%;width:40%;height:52%}
+.art-6::after{border-radius:10% 10% 6% 6%;width:32%;height:64%}
+.art-7::after{border-radius:8px;width:46%;height:38%}
+
+/* ---------- drawer ---------- */
+.mask{position:fixed;inset:0;background:rgba(20,20,18,.42);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:.22s;z-index:40}
+.mask.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(760px,100%);background:var(--panel);border-left:1px solid var(--line);z-index:50;display:flex;flex-direction:column;transform:translateX(102%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-20px 0 60px -30px rgba(0,0,0,.35)}
+.drawer.open{transform:none}
+.dh{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line2)}
+.dh h2{font-size:15px;margin:0;font-weight:700}
+.dh .sp{flex:1}
+.db{flex:1;overflow-y:auto;padding:18px 20px}
+.df{border-top:1px solid var(--line2);padding:12px 20px;display:flex;align-items:center;gap:10px}
+.df .hint{font-size:12px;color:var(--ink3)}
+.df .sp{flex:1}
+
+.steps{display:flex;align-items:center;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink3)}
+.step i{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font:600 11px/1 var(--mono);border:1px solid var(--line);background:var(--panel2);font-style:normal}
+.step.on{color:var(--accent-2);font-weight:600}
+.step.on i{background:var(--accent);border-color:var(--accent);color:#fff}
+html[data-theme="dark"] .step.on i{color:#06201d}
+.step.done i{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-2)}
+.steps .sep{width:14px;height:1px;background:var(--line)}
+
+.field{margin-bottom:16px}
+.field>label{display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px}
+.field .desc{font-size:11.5px;color:var(--ink3);margin:-2px 0 8px}
+.inp,select.inp,textarea.inp{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:9px 11px;font:13px var(--sans);color:var(--ink);outline:none}
+.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.inp{resize:vertical;line-height:1.65}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:560px){.row2,.row3{grid-template-columns:1fr}}
+
+.tabs{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px}
+.tabs button{padding:6px 12px;border-radius:7px;font-size:12.5px;color:var(--ink3)}
+.tabs button.on{background:var(--panel);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:26px 16px;text-align:center;background:var(--panel2);transition:.15s;cursor:pointer}
+.drop:hover{border-color:var(--accent);background:var(--accent-soft)}
+.drop .di{width:40px;height:40px;border-radius:10px;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;margin:0 auto 10px;color:var(--accent)}
+.drop b{display:block;font-size:13px;margin-bottom:3px}
+.drop span{font-size:11.5px;color:var(--ink3)}
+.thumbs{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.thumbs .t{width:64px;height:64px;border-radius:8px;border:1px solid var(--line);position:relative;overflow:hidden}
+.thumbs .t b{position:absolute;left:3px;bottom:3px;font:9px/1 var(--mono);background:rgba(0,0,0,.5);color:#fff;padding:2px 4px;border-radius:3px}
+.thumbs .add{width:64px;height:64px;border-radius:8px;border:1px dashed var(--line);display:grid;place-items:center;color:var(--ink3)}
+
+/* plan confirm */
+.confirm{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:720px){.confirm{grid-template-columns:1fr}}
+.plan-card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px}
+.plan-card h4{margin:0 0 10px;font-size:12.5px;color:var(--ink3);font-weight:600;letter-spacing:.02em}
+.spec{display:grid;gap:8px}
+.spec .sp-item{display:grid;grid-template-columns:64px 1fr;gap:8px;font-size:12px;line-height:1.55}
+.spec .sp-item dt{color:var(--ink3)}
+.spec .sp-item dd{margin:0;color:var(--ink2)}
+.plist{display:flex;flex-direction:column;gap:6px}
+.pitem{display:flex;gap:9px;padding:8px;border-radius:8px;background:var(--panel);border:1px solid var(--line2)}
+.pitem .n{width:18px;height:18px;border-radius:5px;background:var(--accent-soft);color:var(--accent-2);font:600 10px/18px var(--mono);text-align:center;flex:none}
+.pitem .c{min-width:0;flex:1}
+.pitem .c b{display:block;font-size:12.5px;font-weight:600}
+.pitem .c span{display:block;font-size:11.5px;color:var(--ink3);line-height:1.5}
+.pitem input{border:none;background:none;font:600 12.5px var(--sans);color:var(--ink);width:100%;padding:0;outline:none}
+
+/* generating */
+.gen-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.gen-grid.four{grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:620px){.gen-grid.four{grid-template-columns:repeat(2,1fr)}}
+.gen-grid.four .st{left:6px;bottom:6px;font-size:10px;padding:3px 5px}
+.gen-grid.four .ok{top:6px;right:6px;width:18px;height:18px}
+@media(max-width:560px){.gen-grid{grid-template-columns:1fr}}
+.gen{aspect-ratio:1/1;border-radius:10px;border:1px solid var(--line);position:relative;overflow:hidden;background-color:var(--panel2)}
+.gen .sh{position:absolute;inset:0;background:linear-gradient(100deg,transparent 20%,rgba(255,255,255,.55) 50%,transparent 80%);animation:sh 1.4s infinite}
+html[data-theme="dark"] .gen .sh{background:linear-gradient(100deg,transparent 20%,rgba(255,255,255,.08) 50%,transparent 80%)}
+@keyframes sh{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.gen .st{position:absolute;left:10px;bottom:10px;font:11px/1 var(--mono);color:var(--ink3);background:var(--panel);border:1px solid var(--line);padding:4px 6px;border-radius:4px}
+.gen.done{border-color:var(--line)}
+.gen .ok{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center}
+.endacts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px dashed var(--line)}
+.endacts .sp{flex:1}
+.endacts .hint{font-size:11.5px;color:var(--ink3)}
+.tipbox{display:flex;gap:10px;margin-top:18px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);font-size:12px;line-height:1.6;color:var(--ink2)}
+.tipbox b{flex:none;color:var(--ink);font-weight:700}
+.nextrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:20px}
+.nextrow .ttl{font-size:11.5px;color:var(--ink3);margin-right:2px}
+
+.center{text-align:center;padding:40px 0}
+.center .spin{width:34px;height:34px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);margin:0 auto 14px;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.center b{display:block;font-size:14px;margin-bottom:4px}
+.center span{font-size:12.5px;color:var(--ink3)}
+.skel{height:10px;border-radius:5px;background:linear-gradient(90deg,var(--line2),var(--line),var(--line2));background-size:200% 100%;animation:sk 1.2s infinite;margin:8px 0}
+@keyframes sk{0%{background-position:100% 0}100%{background-position:-100% 0}}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.22s;z-index:80;box-shadow:0 12px 30px -12px rgba(0,0,0,.5)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* state switcher */
+.switch{position:fixed;right:18px;bottom:18px;z-index:60;background:var(--panel);border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);padding:8px;display:flex;gap:4px;align-items:center}
+.switch .lbl{font:10px/1 var(--mono);color:var(--ink3);padding:0 6px;letter-spacing:.06em}
+.switch button{font-size:11.5px;padding:5px 8px;border-radius:7px;color:var(--ink3)}
+.switch button:hover{background:var(--panel2);color:var(--ink)}
+.switch button.on{background:var(--accent-soft);color:var(--accent-2);font-weight:600}
+@media(max-width:640px){.switch{left:12px;right:12px;bottom:12px;justify-content:center}}
+body.dopen .switch{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px)}
+.switch{transition:opacity .2s,transform .2s,visibility .2s}
+
+/* kv strip */
+.kvstrip{display:flex;flex-wrap:wrap;gap:12px 30px;align-items:flex-start}
+.kvstrip .k{font-size:12px;line-height:1.5}
+.kvstrip .k i{display:block;font-style:normal;font-size:11px;color:var(--ink3);margin-bottom:3px}
+.kvstrip .k b{font-weight:600}
+.kvstrip .k.warn b{color:#b4552d}
+html[data-theme="dark"] .kvstrip .k.warn b{color:#e08b5f}
+.pitem:hover{border-color:var(--accent)}
+.pitem input:focus{background:var(--panel2);border-radius:4px}
+
+/* empty / loading / over states */
+.hide{display:none!important}
+.empty{text-align:center;padding:34px 16px;color:var(--ink3)}
+.empty .ei{width:44px;height:44px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;margin:0 auto 12px}
+.empty b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:4px}
+.empty p{font-size:12.5px;margin:0 0 12px}
+@media(max-width:720px){.nav .grp{display:none}}
+@media(max-width:720px){
+  .app{grid-template-columns:1fr;padding-bottom:58px}
+  .side{position:fixed;left:0;right:0;bottom:0;top:auto;height:58px;z-index:30;border-right:none;border-top:1px solid var(--line);flex-direction:row;align-items:center;padding:0 4px}
+  .brand{display:none}
+  .nav{display:flex;flex:1;overflow-x:auto;overflow-y:hidden;padding:6px 2px;gap:2px;align-items:center;justify-content:space-around}
+  .nav .grp{display:none!important}
+  .nav a{margin-bottom:0;padding:8px 12px;flex:none}
+  .nav a .lbl{display:none}
+  .side-foot{display:none}
+  .switch{left:12px;right:12px;bottom:70px;justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ============ sidebar ============ -->
+  <aside class="side">
+    <div class="brand">
+      <div class="logo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></svg>
+      </div>
+      <b>Picset</b><span>OSS</span>
+    </div>
+
+    <nav class="nav">
+      <a href="#" class="on" aria-current="page">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span class="lbl">工作台</span>
+      </a>
+
+      <div class="grp">创作</div>
+      <a href="#">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+        <span class="lbl">商品套图</span>
+      </a>
+      <a href="#">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M7 20V9l5-5 5 5v11"/><path d="M10 20v-5h4v5"/></svg>
+        <span class="lbl">风格复刻</span>
+      </a>
+      <a href="#">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
+        <span class="lbl">SKU 替换</span>
+      </a>
+      <a href="#">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        <span class="lbl">服装组图</span>
+      </a>
+      <a href="#">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        <span class="lbl">图片精修</span>
+      </a>
+
+      <div class="grp">编辑</div>
+      <a href="#">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+        <span class="lbl">万能画布</span>
+      </a>
+
+      <div class="grp">资产</div>
+      <a href="#">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        <span class="lbl">作品记录</span>
+      </a>
+      <a href="#">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.6a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4z"/></svg>
+        <span class="lbl">设置</span>
+      </a>
+    </nav>
+
+    <div class="side-foot">
+      <div class="quota-mini" id="quotaMini">
+        <div class="row"><span>今日配额</span><b id="qMiniNum">62 / 100</b></div>
+        <div class="bar"><i id="qMiniBar" style="width:62%"></i></div>
+      </div>
+      <div class="side-actions">
+        <button class="icon-btn" id="themeBtn" aria-label="切换主题">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+        </button>
+        <button class="icon-btn" aria-label="帮助">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.5-1.5 1-1.5 2.1"/><path d="M12 17h.01"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ main ============ -->
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>工作台</h1>
+        <p>今天想做什么图？从这里开始，或者接着上次没做完的。</p>
+      </div>
+      <div class="sp"></div>
+      <label class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" placeholder="搜索作品、项目…" aria-label="搜索">
+      </label>
+      <button class="btn primary" data-open>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        新建创作
+      </button>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpis" id="kpis">
+      <div class="kpi">
+        <div class="lbl">今日已出图</div>
+        <div class="val" id="kpiUsed">62<small>/ 100 张</small></div>
+        <div class="sub" id="kpiSub">每日 00:00 重置</div>
+        <div class="bar"><i id="kpiBar" style="width:62%"></i></div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">进行中任务</div>
+        <div class="val" id="kpiRunning">3<small>个</small></div>
+        <div class="sub" id="kpiRunningSub">其中 1 个等待确认规划</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">本月作品</div>
+        <div class="val" id="kpiWorks">418<small>张</small></div>
+        <div class="sub" id="kpiWorksSub">较上月 +34%</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">平均单套耗时</div>
+        <div class="val">4<small>m 12s</small></div>
+        <div class="sub">含分析 48s · 出图 3m 24s</div>
+      </div>
+    </div>
+
+    <!-- quick start -->
+    <div class="sec-head">
+      <h2>新建创作</h2><span>选一个起点</span>
+      <div class="sp"></div>
+      <button class="btn ghost sm">查看全部模板</button>
+    </div>
+    <div class="notice" id="overNote">
+      <b>今日配额已用尽</b>
+      <span>新的生成请求会被拒绝，已有任务继续跑完。明日 00:00 自动重置，或到设置里调整 DAILY_QUOTA 上限。</span>
+      <button class="btn sm" data-toast="已打开设置 · 配额与模型">去设置</button>
+    </div>
+
+    <div class="quick">
+      <button class="qcard" data-open>
+        <span class="badge">推荐</span>
+        <div class="qi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+        </div>
+        <h3>全品类商品图</h3>
+        <p>一张实拍图 → 主图 + 详情图组，自动规划 16 个模块</p>
+        <span class="go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </button>
+      <button class="qcard" data-open>
+        <div class="qi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M7 20V9l5-5 5 5v11"/><path d="M10 20v-5h4v5"/></svg>
+        </div>
+        <h3>风格复刻</h3>
+        <p>上传爆款参考图，只换产品主体，版式配色全保留</p>
+        <span class="go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </button>
+      <button class="qcard" data-open>
+        <div class="qi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
+        </div>
+        <h3>SKU 批量替换</h3>
+        <p>同款多色多码，一次生成 20 个 SKU 的分组套图</p>
+        <span class="go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </button>
+      <button class="qcard" data-open>
+        <div class="qi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.4 11.6 12 20l-8.4-8.4a5 5 0 1 1 7-7l1.4 1.4 1.4-1.4a5 5 0 1 1 7 7z"/></svg>
+        </div>
+        <h3>服装组图</h3>
+        <p>模特试穿、白底、人台、3D 立体、细节与卖点图</p>
+        <span class="go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </button>
+      <button class="qcard" data-open>
+        <div class="qi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        </div>
+        <h3>图片精修</h3>
+        <p>瑕疵修复、光影重建、白底图，批量一次处理</p>
+        <span class="go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </button>
+      <button class="qcard" data-open>
+        <div class="qi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+        </div>
+        <h3>万能画布</h3>
+        <p>图层、文字、智能分层，出图后就地改，可导出 PSD</p>
+        <span class="go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </button>
+    </div>
+
+    <!-- tasks + quota -->
+    <div class="cols">
+      <div class="panel" id="taskPanel">
+        <div class="ph">
+          <h3>进行中</h3><span class="pill" id="taskCount">3 个任务</span>
+          <div class="sp"></div>
+          <button class="btn ghost sm">全部</button>
+        </div>
+        <div class="pb" id="taskList">
+          <div class="task">
+            <div class="tb art-2"></div>
+            <div class="tinfo">
+              <b>婴儿花洒套装 · 主图 × 4</b>
+              <span>生成中 · 已出 2/4 · 预计还需 1 分 10 秒</span>
+            </div>
+            <div class="prog"><div class="bar"><i style="width:50%"></i></div><em>50%</em></div>
+          </div>
+          <div class="task">
+            <div class="tb art-4"></div>
+            <div class="tinfo">
+              <b>陶瓷马克杯 · 详情图组 × 8</b>
+              <span style="color:var(--warn)">等待你确认规划 · 超时将自动取消</span>
+            </div>
+            <div class="prog"><div class="bar"><i style="width:25%;background:var(--warn)"></i></div><em>待确认</em></div>
+          </div>
+          <div class="task">
+            <div class="tb art-6"></div>
+            <div class="tinfo">
+              <b>SKU 批量替换 · 12 个颜色</b>
+              <span>排队中 · 前面还有 1 个任务</span>
+            </div>
+            <div class="prog"><div class="bar"><i style="width:8%"></i></div><em>排队</em></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="ph"><h3>配额与模型</h3><div class="sp"></div><span class="pill">BYOK 已配置</span></div>
+        <div class="qbox">
+          <div class="ring">
+            <svg width="72" height="72" viewBox="0 0 36 36" aria-hidden="true">
+              <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--line2)" stroke-width="3.2"/>
+              <circle id="ringFill" cx="18" cy="18" r="15.5" fill="none" stroke="var(--accent)" stroke-width="3.2"
+                      stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="37" transform="rotate(-90 18 18)"/>
+            </svg>
+            <div class="rt"><b id="ringNum">38</b><span id="ringSub">今天还能出 38 张</span></div>
+          </div>
+          <div style="margin-top:14px">
+            <div class="kv"><span>默认模型</span><b>Nano Banana 2.1</b></div>
+            <div class="kv"><span>默认清晰度</span><b>2K</b></div>
+            <div class="kv"><span>提示词包</span><b>v1.4.0 · 40 组</b></div>
+            <div class="kv"><span>今日花费</span><b>≈ ¥18.4</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- recent -->
+    <div class="sec-head">
+      <h2>最近作品</h2><span>最近 7 天</span>
+      <div class="sp"></div>
+      <button class="btn ghost sm">作品记录 →</button>
+    </div>
+    <div class="works" id="works">
+      <div class="work">
+        <div class="art art-1"><span class="meta">4 张</span>
+          <div class="act"><button aria-label="下载"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></button><button aria-label="编辑"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>
+        </div>
+        <div class="cap"><b>婴儿花洒</b><span>11:08</span></div>
+      </div>
+      <div class="work">
+        <div class="art art-3"><span class="meta">8 张</span>
+          <div class="act"><button aria-label="下载"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></button><button aria-label="编辑"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>
+        </div>
+        <div class="cap"><b>陶瓷马克杯</b><span>昨天</span></div>
+      </div>
+      <div class="work">
+        <div class="art art-5"><span class="meta">12 张</span>
+          <div class="act"><button aria-label="下载"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></button><button aria-label="编辑"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>
+        </div>
+        <div class="cap"><b>蚕丝眼罩</b><span>昨天</span></div>
+      </div>
+      <div class="work">
+        <div class="art art-7"><span class="meta">4 张</span>
+          <div class="act"><button aria-label="下载"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></button><button aria-label="编辑"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>
+        </div>
+        <div class="cap"><b>折叠露营椅</b><span>11-06</span></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- state switcher -->
+<div class="switch" role="group" aria-label="预览状态">
+  <span class="lbl">状态</span>
+  <button class="on" data-state="normal">正常</button>
+  <button data-state="empty">空</button>
+  <button data-state="loading">加载</button>
+  <button data-state="over">超额</button>
+</div>
+
+<!-- ============ drawer ============ -->
+<div class="mask" id="mask"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle" aria-hidden="true">
+  <div class="dh">
+    <h2 id="dTitle">全品类商品图</h2>
+    <span class="pill" id="dCost">预计 4 张 · 约 1 分 20 秒</span>
+    <div class="sp"></div>
+    <button class="icon-btn" id="dClose" aria-label="关闭">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="db">
+    <div class="steps" id="steps">
+      <div class="step on" data-s="1"><i>1</i>上传</div><span class="sep"></span>
+      <div class="step" data-s="2"><i>2</i>分析</div><span class="sep"></span>
+      <div class="step" data-s="3"><i>3</i>确认规划</div><span class="sep"></span>
+      <div class="step" data-s="4"><i>4</i>生成</div><span class="sep"></span>
+      <div class="step" data-s="5"><i>5</i>完成</div>
+    </div>
+
+    <!-- step 1 -->
+    <div class="pane" data-pane="1">
+      <div class="field">
+        <label>产品图</label>
+        <div class="desc">建议 1–3 张：正面、侧面、细节各一。不是越多越好。</div>
+        <div class="drop" id="drop">
+          <div class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
+          <b>拖拽图片到这里，或点击选择</b>
+          <span>PNG / JPG / HEIC，单张 ≤ 20MB</span>
+        </div>
+        <div class="thumbs">
+          <div class="t art-2"><b>1</b></div>
+          <div class="t art-8"><b>2</b></div>
+          <div class="add"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>产出类型</label>
+        <div class="tabs" style="margin-bottom:10px">
+          <button class="on">主图</button><button>详情图</button>
+        </div>
+        <div class="row2">
+          <div>
+            <label style="font-size:12px;color:var(--ink3);display:block;margin-bottom:6px">目标平台</label>
+            <select class="inp"><option>智能匹配</option><option>淘宝 / 天猫</option><option>京东</option><option>抖音</option><option>亚马逊 A+</option><option>TikTok Shop</option></select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--ink3);display:block;margin-bottom:6px">目标语言</label>
+            <select class="inp"><option>中文（简体）</option><option>English</option><option>无文字（纯视觉）</option></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>主图要求 <span style="font-weight:400;color:var(--ink3)">（自然语言，越具体越好）</span></label>
+        <textarea class="inp" rows="3">请根据我上传的产品图，生成符合京东平台的高点击率主图。突出磨砂质感与出水柔和，背景干净，顶部留白放主标题。</textarea>
+        <div style="margin-top:8px"><button class="btn sm" id="aiWrite"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg> AI 帮写</button></div>
+      </div>
+
+      <div class="row3">
+        <div><label style="font-size:12px;color:var(--ink3);display:block;margin-bottom:6px">模型</label><select class="inp"><option>Nano Banana 2.1</option><option>Nano Banana 2</option><option>Nano Banana Pro</option><option>GPT-Image-2</option></select></div>
+        <div><label style="font-size:12px;color:var(--ink3);display:block;margin-bottom:6px">比例</label><select class="inp"><option>1:1 正方形</option><option>3:4 竖版</option><option>4:5</option><option>16:9</option></select></div>
+        <div><label style="font-size:12px;color:var(--ink3);display:block;margin-bottom:6px">数量</label><select class="inp"><option>4 张</option><option>2 张</option><option>1 张</option><option>8 张</option></select></div>
+      </div>
+    </div>
+
+    <!-- step 2 -->
+    <div class="pane hide" data-pane="2">
+      <div class="center" id="analyzing">
+        <div class="spin"></div>
+        <b>正在分析产品与需求</b>
+        <span>识别主体特征 → 提炼卖点 → 规划版式与文案</span>
+      </div>
+      <div style="max-width:420px;margin:24px auto 0">
+        <div class="skel" style="width:90%"></div>
+        <div class="skel" style="width:76%"></div>
+        <div class="skel" style="width:84%"></div>
+      </div>
+    </div>
+
+    <!-- step 3 -->
+    <div class="pane hide" data-pane="3">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:12.5px;color:var(--ink3)">AI 已完成规划，下面每一项都可以改。</span>
+        <div class="sp" style="flex:1"></div>
+        <button class="btn sm" id="rerun">重新分析</button>
+      </div>
+      <div class="confirm">
+        <div class="plan-card">
+          <h4>整体设计规范</h4>
+          <dl class="spec">
+            <div class="sp-item"><dt>字体</dt><dd>标题思源宋体 / 正文思源黑体，字号 3 : 1.8 : 1</dd></div>
+            <div class="sp-item"><dt>视觉</dt><dd>极简几何线条 + 柔和渐变，留白 ≥ 30%</dd></div>
+            <div class="sp-item"><dt>摄影</dt><dd>柔光侧逆光，微浅景深，f/8 · 1/125s · ISO100</dd></div>
+            <div class="sp-item"><dt>品质</dt><dd>4K 输出，超写实，商业广告级</dd></div>
+            <div class="sp-item"><dt>平台</dt><dd>京东 · 主图 1:1 · 白底优先</dd></div>
+            <div class="sp-item"><dt>语言</dt><dd>中文（简体）</dd></div>
+          </dl>
+        </div>
+        <div class="plan-card">
+          <h4>图片规划 · 共 4 张<span style="font-weight:400;color:var(--ink3);margin-left:8px">点标题可改</span></h4>
+          <div class="plist">
+            <div class="pitem"><span class="n">1</span><div class="c"><input value="白底主视觉"><span>产品占比 68%，居中偏下，底部轻微倒影</span></div></div>
+            <div class="pitem"><span class="n">2</span><div class="c"><input value="材质特写"><span>超近局部，突出磨砂表面与出水孔细节</span></div></div>
+            <div class="pitem"><span class="n">3</span><div class="c"><input value="使用场景"><span>浴室环境，暖光，水汽氛围，人物手部入镜</span></div></div>
+            <div class="pitem"><span class="n">4</span><div class="c"><input value="卖点信息图"><span>三段式排版：富氧起泡 / 两档调节 / 亲肤柔和</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="plan-card" style="margin-top:16px">
+        <div class="kvstrip">
+          <span class="k"><i>模型</i><b>Nano Banana 2.1</b></span>
+          <span class="k"><i>比例</i><b>1 : 1</b></span>
+          <span class="k"><i>数量</i><b>4 张</b></span>
+          <span class="k"><i>本次消耗配额</i><b>4 张</b></span>
+          <span class="k"><i>今日剩余</i><b>38 张</b></span>
+          <span class="k warn"><i>超时保护</i><b>30 分钟自动取消</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- step 4 -->
+    <div class="pane hide" data-pane="4">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:12.5px;color:var(--ink3)" id="genHint">正在生成 1 / 4 …</span>
+      </div>
+      <div class="gen-grid" id="genGrid">
+        <div class="gen art-2"><div class="sh"></div><span class="st">生成中…</span></div>
+        <div class="gen"><div class="sh"></div><span class="st">排队中</span></div>
+        <div class="gen"><div class="sh"></div><span class="st">排队中</span></div>
+        <div class="gen"><div class="sh"></div><span class="st">排队中</span></div>
+      </div>
+    </div>
+
+    <!-- step 5 -->
+    <div class="pane hide" data-pane="5">
+      <div class="center" style="padding:8px 0 18px">
+        <b style="font-size:16px">4 张图已生成</b>
+        <span>耗时 3 分 41 秒 · 消耗配额 4 张</span>
+      </div>
+      <div class="gen-grid four">
+        <div class="gen art-2"><span class="ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="st">1 · 白底主视觉</span></div>
+        <div class="gen art-4"><span class="ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="st">2 · 材质特写</span></div>
+        <div class="gen art-6"><span class="ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="st">3 · 使用场景</span></div>
+        <div class="gen art-8"><span class="ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="st">4 · 卖点信息图</span></div>
+      </div>
+
+      <div class="endacts">
+        <button class="btn primary" id="dlAll">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          下载全部（4）
+        </button>
+        <button class="btn" id="again">再生成一组</button>
+        <button class="btn" id="toWorks">保存到作品记录</button>
+        <div class="sp"></div>
+        <span class="hint">图片已保存，7 天内可重新下载</span>
+      </div>
+
+      <div class="tipbox">
+        <b>提示</b>
+        <span>这 4 张共用同一套规划，产品主体与配色保持一致；某一张不满意可以只重跑那一张，配额按张扣，不用整组重来。</span>
+      </div>
+
+      <div class="nextrow">
+        <span class="ttl">接着做</span>
+        <button class="btn sm" data-toast="已载入万能画布，可直接加文字排版">去画布加文字</button>
+        <button class="btn sm" data-toast="已按这组主图排入详情图队列（16 张）">生成同款详情图组</button>
+        <button class="btn sm" data-toast="已复用这套规划，可直接换产品图">复用这套规划</button>
+        <button class="btn sm" data-toast="已导出 1:1 / 3:4 / 16:9 三套尺寸">导出多尺寸</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="df">
+    <span class="hint" id="dHint">第 1 步 / 共 5 步</span>
+    <div class="sp"></div>
+    <button class="btn" id="dPrev" disabled>上一步</button>
+    <button class="btn primary" id="dNext">分析产品</button>
+  </div>
+</aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  var $ = function(s,r){ return (r||document).querySelector(s); };
+  var $$ = function(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); };
+
+  /* ---------- theme ---------- */
+  var themeBtn = $('#themeBtn');
+  themeBtn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    toast(cur === 'dark' ? '已切换浅色' : '已切换深色');
+  });
+
+  /* ---------- toast ---------- */
+  var toastEl = $('#toast'), toastTimer;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 1800);
+  }
+
+  /* ---------- drawer ---------- */
+  var mask = $('#mask'), drawer = $('#drawer');
+  var step = 1, timers = [];
+
+  function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+
+  function openDrawer(){
+    mask.classList.add('open');
+    drawer.classList.add('open');
+    document.body.classList.add('dopen');
+    drawer.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+    goStep(1);
+    setTimeout(function(){ $('#dClose').focus(); }, 80);
+  }
+  function closeDrawer(){
+    mask.classList.remove('open');
+    drawer.classList.remove('open');
+    document.body.classList.remove('dopen');
+    drawer.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+    clearTimers();
+  }
+  $('#dClose').addEventListener('click', closeDrawer);
+  mask.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
+  });
+
+  var NEXT_LABEL = {1:'分析产品',2:'分析中…',3:'确认生成 4 张',4:'生成中…',5:'完成'};
+
+  function goStep(n){
+    clearTimers();
+    step = n;
+    $$('.pane').forEach(function(p){ p.classList.toggle('hide', p.getAttribute('data-pane') !== String(n)); });
+    $$('#steps .step').forEach(function(s){
+      var sn = +s.getAttribute('data-s');
+      s.classList.toggle('on', sn === n);
+      s.classList.toggle('done', sn < n);
+    });
+    $('#dHint').textContent = '第 ' + n + ' 步 / 共 5 步';
+    $('#dPrev').disabled = (n === 1);
+    var next = $('#dNext');
+    next.disabled = (n === 2 || n === 4);
+    next.textContent = NEXT_LABEL[n];
+    next.style.display = (n === 5) ? 'none' : '';
+    $('#dPrev').style.display = (n === 5) ? 'none' : '';
+    if(n === 2) startAnalyze();
+    if(n === 4) startGenerate();
+    if(n === 5) { $('#dCost').textContent = '已完成 · 4 张'; }
+  }
+
+  function startAnalyze(){
+    timers.push(setTimeout(function(){ if(step === 2) goStep(3); }, 2600));
+  }
+
+  function startGenerate(){
+    var cards = $$('#genGrid .gen');
+    var arts = ['art-2','art-4','art-6','art-8'];
+    cards.forEach(function(c, i){
+      c.innerHTML = '<div class="sh"></div><span class="st">排队中</span>';
+      c.className = 'gen';
+    });
+    cards.forEach(function(c, i){
+      timers.push(setTimeout(function(){
+        if(step !== 4) return;
+        $('#genHint').textContent = '正在生成 ' + (i+1) + ' / 4 …';
+        c.querySelector('.st').textContent = '生成中…';
+      }, 200 + i * 900));
+      timers.push(setTimeout(function(){
+        if(step !== 4) return;
+        c.className = 'gen ' + arts[i];
+        c.innerHTML = '<span class="ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>';
+        if(i === 3){
+          $('#genHint').textContent = '全部完成';
+          timers.push(setTimeout(function(){ if(step === 4) goStep(5); }, 700));
+        }
+      }, 1100 + i * 900));
+    });
+  }
+
+  $('#dNext').addEventListener('click', function(){
+    if(step === 1) { goStep(2); return; }
+    if(step === 3) { goStep(4); return; }
+    if(step === 5) { closeDrawer(); return; }
+  });
+  $('#dPrev').addEventListener('click', function(){ if(step > 1) goStep(step - 1); });
+  $('#rerun').addEventListener('click', function(){ goStep(2); });
+  $('#aiWrite').addEventListener('click', function(){ toast('已根据产品图补全卖点描述'); });
+  $('#dlAll').addEventListener('click', function(){ toast('已开始打包下载 4 张原图（2K JPG）'); });
+  $('#again').addEventListener('click', function(){ toast('已按同一规划再排一组，配额 -4'); });
+  $('#toWorks').addEventListener('click', function(){ toast('已保存到作品记录'); });
+  $('#drop').addEventListener('click', function(){ toast('原型演示：这里会打开文件选择'); });
+
+  /* ---------- preview states ---------- */
+  var worksHTML = $('#works').innerHTML;
+  var tasksHTML = $('#taskList').innerHTML;
+
+  function setState(s){
+    $$('.switch button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-state') === s); });
+
+    // reset
+    $('#kpis').classList.remove('hide');
+    $('#taskPanel').classList.remove('hide');
+    $('#works').parentElement.querySelectorAll('.sec-head')[1] &&
+      $('#works').parentElement.querySelectorAll('.sec-head')[1].classList.remove('hide');
+    $('#works').classList.remove('hide');
+    $('#taskList').innerHTML = tasksHTML;
+    $('#works').innerHTML = worksHTML;
+    $('#quotaMini').classList.remove('warn');
+    $('#kpiUsed').innerHTML = '62<small>/ 100 张</small>';
+    $('#kpiRunning').innerHTML = '3<small>个</small>';
+    $('#kpiRunningSub').textContent = '其中 1 个等待确认规划';
+    $('#kpiWorks').innerHTML = '418<small>张</small>';
+    $('#kpiWorksSub').textContent = '较上月 +34%';
+    $('#taskCount').textContent = '3 个任务';
+    $('#kpiBar').style.width = '62%';
+    $('#kpiBar').style.background = '';
+    $('#qMiniNum').textContent = '62 / 100';
+    $('#qMiniBar').style.width = '62%';
+    $('#qMiniBar').style.background = '';
+    $('#ringNum').textContent = '38';
+    $('#ringFill').setAttribute('stroke-dashoffset','37');
+    $('#ringFill').setAttribute('stroke','var(--accent)');
+    $('#ringSub').textContent = '今天还能出 38 张';
+    $('#kpiSub').textContent = '每日 00:00 重置';
+    $('#overNote').classList.remove('show');
+
+    if(s === 'empty'){
+      $('#taskList').innerHTML =
+        '<div class="empty"><div class="ei"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>' +
+        '<b>还没有进行中的任务</b><p>从上面挑一个起点，第一套图大约 4 分钟。</p>' +
+        '<button class="btn sm" data-open>新建创作</button></div>';
+      $('#works').innerHTML =
+        '<div class="empty" style="grid-column:1/-1"><div class="ei"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div>' +
+        '<b>还没有作品</b><p>生成的第一套图会自动出现在这里。</p></div>';
+      $('#kpiRunning').innerHTML = '0<small>个</small>';
+      $('#kpiRunningSub').textContent = '从下面挑一个起点开始';
+      $('#kpiWorks').innerHTML = '0<small>张</small>';
+      $('#kpiWorksSub').textContent = '生成后会出现在这里';
+      $('#taskCount').textContent = '0 个任务';
+      toast('预览：空数据状态');
+    }
+
+    if(s === 'loading'){
+      var sk = '';
+      for(var i=0;i<3;i++){
+        sk += '<div class="task"><div class="tb" style="background:var(--line2)"></div><div class="tinfo" style="width:100%">' +
+              '<div class="skel" style="width:52%;margin:2px 0 8px"></div><div class="skel" style="width:74%"></div></div></div>';
+      }
+      $('#taskList').innerHTML = sk;
+      var wk = '';
+      for(var j=0;j<4;j++){
+        wk += '<div class="work"><div class="art" style="background:var(--line2)"></div><div class="cap">' +
+              '<div class="skel" style="width:70%;margin:2px 0"></div></div></div>';
+      }
+      $('#works').innerHTML = wk;
+      toast('预览：加载状态');
+    }
+
+    if(s === 'over'){
+      $('#quotaMini').classList.add('warn');
+      $('#kpiUsed').innerHTML = '100<small>/ 100 张</small>';
+      $('#kpiBar').style.width = '100%';
+      $('#kpiBar').style.background = 'var(--warn)';
+      $('#qMiniNum').textContent = '100 / 100';
+      $('#qMiniBar').style.width = '100%';
+      $('#qMiniBar').style.background = 'var(--warn)';
+      $('#ringNum').textContent = '0';
+      $('#ringSub').textContent = '今日配额已用尽';
+      $('#ringFill').setAttribute('stroke-dashoffset','0');
+      $('#ringFill').setAttribute('stroke','var(--warn)');
+      $('#kpiSub').textContent = '明日 00:00 重置';
+      $('#overNote').classList.add('show');
+      toast('预览：配额用尽状态');
+    }
+
+    if(s === 'normal') toast('预览：正常状态');
+  }
+  $$('.switch button').forEach(function(b){
+    b.addEventListener('click', function(){ setState(b.getAttribute('data-state')); });
+  });
+
+  // 让空状态里的按钮也能打开抽屉（事件委托）
+  document.addEventListener('click', function(e){
+    var t = e.target.closest('[data-open]');
+    if(t) openDrawer();
+    var tt = e.target.closest('[data-toast]');
+    if(tt) toast(tt.getAttribute('data-toast'));
+  });
+})();
+</script>
+</body>
+</html>

@@ -236,7 +236,7 @@ def generate_scenarios(
     返回 (scenarios, stats)。素材不足时少生成（不跨分类填充）；
     该分类一条可用素材都没有时抛 ValueError（由路由转 400）。
     """
-    client, model = _get_llm_client()
+    client, model = _get_llm_client("chat")
     if not client:
         raise RuntimeError("LLM 客户端未初始化，请检查 API Key 配置")
 
@@ -286,7 +286,7 @@ def generate_scenarios(
 
 def customer_turn(scenario: Dict, transcript: List[Dict]) -> Dict:
     """AI 扮演客户，按已有对话产出下一句。返回 {reply, is_end}"""
-    client, model = _get_llm_client()
+    client, model = _get_llm_client("chat")
     if not client:
         raise RuntimeError("LLM 客户端未初始化，请检查 API Key 配置")
 

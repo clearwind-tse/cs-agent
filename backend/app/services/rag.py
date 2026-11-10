@@ -341,29 +341,22 @@ class RAGService:
     # ------------------------------------------------------------------ #
 
     def _generate_answer(self, question: str, context: str) -> str:
-        if settings.ark_api_key and settings.ark_base_url:
-            return self._call_llm(question, context,
-                api_key=settings.ark_api_key, base_url=settings.ark_base_url, model="qwen-plus")
-        if settings.deepseek_api_key:
-            return self._call_llm(question, context,
-                api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url, model="deepseek-chat")
-        if settings.openai_api_key:
-            return self._call_llm(question, context,
-                api_key=settings.openai_api_key, base_url=settings.openai_base_url, model="gpt-4o-mini")
-        return f"[未配置 LLM API，以下是相关聊天记录]\n\n{context}"
+        """provider / 模型取设置页「知识库问答」板块（默认仍为 ark → deepseek → openai）"""
+        from app.services.model_registry import resolve
+        r = resolve("rag")
+        if not r.configured:
+            return f"[未配置 LLM API，以下是相关聊天记录]\n\n{context}"
+        return self._call_llm(question, context,
+            api_key=r.api_key, base_url=r.base_url, model=r.model)
 
     def _generate_answer_stream(self, question: str, context: str) -> Generator[str, None, None]:
-        if settings.ark_api_key and settings.ark_base_url:
-            yield from self._call_llm_stream(question, context,
-                api_key=settings.ark_api_key, base_url=settings.ark_base_url, model="qwen-plus")
-        elif settings.deepseek_api_key:
-            yield from self._call_llm_stream(question, context,
-                api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url, model="deepseek-chat")
-        elif settings.openai_api_key:
-            yield from self._call_llm_stream(question, context,
-                api_key=settings.openai_api_key, base_url=settings.openai_base_url, model="gpt-4o-mini")
-        else:
+        from app.services.model_registry import resolve
+        r = resolve("rag")
+        if not r.configured:
             yield f"[未配置 LLM API，以下是相关聊天记录]\n\n{context}"
+            return
+        yield from self._call_llm_stream(question, context,
+            api_key=r.api_key, base_url=r.base_url, model=r.model)
 
     def _get_system_prompt(self) -> str:
         """融合版系统提示词 — 知识准确 + 本平台客服风格"""

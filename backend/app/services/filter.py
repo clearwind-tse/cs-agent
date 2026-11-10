@@ -273,17 +273,13 @@ class LLMContentClassifier:
             return "unknown"
         
         try:
-            from app.config import get_settings
-            settings = get_settings()
-            
-            from openai import OpenAI
-            client = OpenAI(
-                api_key=settings.deepseek_api_key or settings.openai_api_key,
-                base_url=settings.deepseek_base_url or settings.openai_base_url
-            )
-            
+            from app.services.model_registry import openai_client
+            client, model = openai_client("filter")
+            if not client:
+                return "unknown"
+
             response = client.chat.completions.create(
-                model="deepseek-chat" if settings.deepseek_api_key else "gpt-4o-mini",
+                model=model,
                 messages=[
                     {"role": "user", "content": self.CLASSIFICATION_PROMPT.format(content=content[:1000])}
                 ],

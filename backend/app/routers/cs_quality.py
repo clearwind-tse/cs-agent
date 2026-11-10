@@ -52,7 +52,7 @@ class ConfigSchema(BaseModel):
     name: str
     description: str = ""
     business_persona: str = "你是某平台的在线客服。"
-    model: str = "deepseek-chat"
+    model: str = ""                 # 空 = 跟随设置页「质检与质量评分」板块；填了则这套标准单独指定
     dimensions: List[DimensionSchema]
     violations: List[ViolationSchema]
     pass_threshold: float = 60.0

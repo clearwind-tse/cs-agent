@@ -38,10 +38,14 @@ services:
       API_PORT: 8000
       DEBUG: "false"
       APP_ENV: prod
+      # AI 创作素材库：落容器内 /app/data/media，由下面的卷持久化
+      MEDIA_ROOT: /app/data/media
     volumes:
       - ./Msg/Msg:/data/wechat:ro
       - ./FileStorage/Voice:/data/voice:ro
       - ./scripts:/app/scripts:ro
+      # 素材文件持久化：不挂这个卷，容器重建即丢图
+      - ./data/media:/app/data/media
     ports:
       - "8000:8000"
     depends_on:

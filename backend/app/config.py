@@ -13,11 +13,13 @@ class Settings(BaseSettings):
     # 数据库配置（默认与 Docker / 线上保持一致）
     database_url: str = "postgresql://postgres:postgres@localhost:5432/agent_cs_playbook"
     
-    # OpenAI 配置
+    # ---------- 模型 Provider 的连接信息 ----------
+    # 这里只放「密钥 / 端点 / provider 默认模型名」，一律由 .env 注入，绝不写进 DB。
+    # 「哪个业务板块用哪个模型」由设置页写 model_settings 表，见 services/model_registry.py。
+    # OpenAI 兼容端点可指向本地 Ollama / vLLM，用于自托管模型。
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
-    
-    # DeepSeek 配置
+
     deepseek_api_key: str = ""
     deepseek_base_url: str = "https://api.deepseek.com/v1"
     
@@ -28,6 +30,8 @@ class Settings(BaseSettings):
     
     # 豆包视觉理解模型（火山方舟）
     ark_vision_api_key: str = ""  # 火山方舟独立 API Key（与 DashScope 的 ark_api_key 不同）
+    # ep-xxxx 是账号相关的「推理接入点 ID」，自托管时务必在 .env 覆盖成自己的，
+    # 或在设置页「图片信息提取」板块直接指定模型名。
     ark_vision_model: str = "ep-20260325211910-2s55z"
     ark_vision_base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
     
@@ -72,7 +76,15 @@ class Settings(BaseSettings):
 
     # 自动流水线：智能客服会话关闭推送进 raw_chats 后，是否自动跑 清洗→质检→知识提炼
     auto_pipeline_on_push: bool = True
-    
+
+    # ==================== 媒体存储（AI 创作素材库）====================
+    # 当前策略：落本地文件夹（backend/data/media），不依赖对象存储。
+    # 换 OSS / TOS 时只需替换 app/services/media_store.py 的落盘与取 URL 两处，
+    # 表结构与前端契约不变（url 字段从本地静态路径换成签名 URL 即可）。
+    media_root: str = ""                  # 空 = backend/data/media
+    media_max_mb: int = 20                # 单文件上限
+    media_url_prefix: str = "/api/media/files"  # 静态访问前缀
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

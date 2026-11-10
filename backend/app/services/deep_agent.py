@@ -141,36 +141,27 @@ def get_checkpointer():
 
 def _get_chat_model(temperature: float = 0.3):
     """
-    把项目统一的 DeepSeek 客户端配置转成 LangChain ChatModel。
+    把设置页「Agent 编排」板块的模型转成 LangChain ChatModel。
 
     注意：deepagents 内部走 LangChain 的 tool-calling，不能用裸 openai.OpenAI。
-    base_url 指向 DeepSeek 的 OpenAI 兼容端点，因此必须显式关掉 responses API，
-    否则 langchain-openai 会按 OpenAI 官方端点发请求。
+    所有 provider 都是 OpenAI 兼容端点（含自托管 Ollama / vLLM），
+    因此统一显式关掉 responses API，否则 langchain-openai 会按官方端点发请求。
     """
-    from app.config import get_settings
     from langchain_openai import ChatOpenAI
+    from app.services.model_registry import resolve
 
-    s = get_settings()
-    if s.deepseek_api_key:
-        return ChatOpenAI(
-            model="deepseek-chat",
-            api_key=s.deepseek_api_key,
-            base_url=s.deepseek_base_url,
-            temperature=temperature,
-            timeout=90,
-            max_retries=1,
-            use_responses_api=False,
-        )
-    if s.openai_api_key:
-        return ChatOpenAI(
-            model="gpt-4o-mini",
-            api_key=s.openai_api_key,
-            base_url=s.openai_base_url,
-            temperature=temperature,
-            timeout=90,
-            max_retries=1,
-        )
-    return None
+    r = resolve("agent")
+    if not r.configured:
+        return None
+    return ChatOpenAI(
+        model=r.model,
+        api_key=r.api_key,
+        base_url=r.base_url,
+        temperature=temperature,
+        timeout=90,
+        max_retries=1,
+        use_responses_api=False,
+    )
 
 
 # ==================== 工具适配：项目 BaseTool → LangChain Tool ====================

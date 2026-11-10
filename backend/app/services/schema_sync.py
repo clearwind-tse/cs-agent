@@ -82,6 +82,24 @@ def ensure_agent_session_schema(engine) -> list[str]:
     )
 
 
+def ensure_media_asset_schema(engine) -> list[str]:
+    """
+    为旧版 media_assets 补二级目录列。
+    create_all 只建新表、不改旧表，所以这列必须显式 ALTER；
+    补完再建索引（新表由 create_all 建过，IF NOT EXISTS 保证幂等）。
+    """
+    inspector = inspect(engine)
+    if 'media_assets' not in inspector.get_table_names():
+        return []
+    added = _add_missing_columns(engine, 'media_assets', [('category', 'VARCHAR(40)')])
+    existing_indexes = {idx['name'] for idx in inspector.get_indexes('media_assets')}
+    if 'ix_media_assets_category' not in existing_indexes:
+        with engine.connect() as conn:
+            conn.execute(text('CREATE INDEX IF NOT EXISTS ix_media_assets_category ON media_assets(category)'))
+            conn.commit()
+    return added
+
+
 def ensure_ticket_schema(engine) -> list[str]:
     """
     为旧版 tickets 表补齐工单系统新增字段（SLA / 解决时间 / 处理结论）。

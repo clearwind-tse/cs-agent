@@ -525,21 +525,10 @@ class DataGenerator:
         self.progress = GenerationProgress()
 
     def _init_client(self):
-        """初始化 LLM 客户端"""
+        """初始化 LLM 客户端；模型取设置页「训练数据生成」板块"""
         try:
-            from openai import OpenAI
-            if settings.deepseek_api_key:
-                self.client = OpenAI(
-                    api_key=settings.deepseek_api_key,
-                    base_url=settings.deepseek_base_url
-                )
-                self.model = "deepseek-chat"
-            elif settings.openai_api_key:
-                self.client = OpenAI(
-                    api_key=settings.openai_api_key,
-                    base_url=settings.openai_base_url
-                )
-                self.model = "gpt-4o-mini"
+            from app.services.model_registry import openai_client
+            self.client, self.model = openai_client("training_data")
         except Exception as e:
             print(f"[DataGenerator] LLM client init failed: {e}")
 

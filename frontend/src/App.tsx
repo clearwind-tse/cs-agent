@@ -13,7 +13,9 @@ import CustomDataView from './components/CustomDataView'
 import ExtractorView from './components/ExtractorView'
 import QuizView from './components/QuizView'
 import TrainingView from './components/TrainingView'
-import OverviewView from './components/OverviewView'
+import GlobalOverviewView, { type OverviewTab } from './components/GlobalOverviewView'
+import StudioWorkbench from './components/StudioWorkbench'
+import SettingsView from './components/SettingsView'
 import LoginPage from './components/LoginPage'
 import ToastContainer from './components/Toast'
 import { ToastProvider, useToast } from './contexts/ToastContext'
@@ -28,11 +30,14 @@ import { AuroraBackground } from './components/ui/AuroraBackground'
 import {
   buildAgentPath,
   buildChatPath,
+  buildStudioPath,
   buildViewPath,
   getAgentPaneFromPath,
   getChatRouteState,
+  getStudioPaneFromPath,
   getViewModeFromPath,
   type AgentPane,
+  type StudioPane,
   type ViewMode,
 } from './appRoutes'
 
@@ -55,6 +60,16 @@ function AppContent() {
   const viewMode = React.useMemo(() => getViewModeFromPath(location.pathname), [location.pathname])
   // Agent 工作台的子页面（会话 / 工单 / Skill & MCP / Agent 配置），由 URL 决定
   const agentPane = React.useMemo(() => getAgentPaneFromPath(location.pathname), [location.pathname])
+  // AI 创作工作区的子页面（套图 / 风格 / SKU / …），同样由 URL 决定
+  const studioPane = React.useMemo(() => getStudioPaneFromPath(location.pathname), [location.pathname])
+  /** 当前视图的子页，供导航条与上下文条定位（Agent 与 AI 创作各有一套 pane 取值） */
+  const activePane: AgentPane | StudioPane | null =
+    viewMode === 'agent' ? agentPane : viewMode === 'studio' ? studioPane : null
+  /** 全局总览的两个视角：默认落在「待办」，统计作为第二个 Tab */
+  const overviewTab: OverviewTab = React.useMemo(
+    () => (new URLSearchParams(location.search).get('tab') === 'stats' ? 'stats' : 'todo'),
+    [location.search],
+  )
   const chatRouteState = React.useMemo(
     () => getChatRouteState(location.pathname, location.search),
     [location.pathname, location.search],
@@ -161,7 +176,7 @@ function AppContent() {
         {/* 左侧主导航 - Primary Sidebar */}
         <PrimarySidebar
           currentView={viewMode}
-          currentPane={viewMode === 'agent' ? agentPane : null}
+          currentPane={activePane}
           onNavigate={(path) => navigate(path)}
           onOpenChat={() => openView('chat')}
           onOpenSearch={() => openView('search')}
@@ -191,7 +206,7 @@ function AppContent() {
         {/* 主内容区 - 防止溢出 */}
         <main className={layoutClasses.main}>
           {/* 统一上下文条：位置 / 链路步骤 / 跨链路关联，不随视图转场重建 */}
-          <AppContextBar view={viewMode} pane={viewMode === 'agent' ? agentPane : null} onNavigate={handleNavigateItem} />
+          <AppContextBar view={viewMode} pane={activePane} onNavigate={handleNavigateItem} />
 
           {/* 只做透明度转场：transform / filter 会创建 containing block，破坏视图内的 fixed 弹窗 */}
           <AnimatePresence mode="wait" initial={false}>
@@ -234,8 +249,19 @@ function AppContent() {
             <QuizView onClose={() => openView('chat')} />
           ) : viewMode === 'training' ? (
             <TrainingView />
+          ) : viewMode === 'studio' ? (
+            <StudioWorkbench
+              pane={studioPane}
+              onPaneChange={(next: StudioPane) => navigate(buildStudioPath(next))}
+            />
+          ) : viewMode === 'settings' ? (
+            <SettingsView />
           ) : viewMode === 'overview' ? (
-            <OverviewView onNavigate={handleNavigateItem} />
+            <GlobalOverviewView
+              tab={overviewTab}
+              onTabChange={(next) => navigate(next === 'stats' ? '/overview?tab=stats' : '/overview')}
+              onNavigate={handleNavigateItem}
+            />
           ) : selectedSession ? (
             <ChatView
               session={selectedSession}
@@ -299,8 +325,8 @@ function EmptyState({ onNavigate }: { onNavigate: (path: string) => void }) {
           数据，<span className="aurora-text">在光里流动。</span>
         </h2>
         <p className="text-ink-muted text-[15px] leading-[1.9] mb-10">
-          在线服务 · 数据治理 · 模型优化<br />
-          从聊天记录到 SFT / DPO 训练数据，一条链路跑通。
+          在线服务 · 数据治理 · 模型优化 · AI 创作<br />
+          从聊天记录到 SFT / DPO 训练数据，再到商品图生产。
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2">
           <button
@@ -309,7 +335,7 @@ function EmptyState({ onNavigate }: { onNavigate: (path: string) => void }) {
             title={OVERVIEW_ITEM.desc}
             className="glass inline-flex items-center gap-2 rounded-pill border border-iris/30 px-4 py-2 text-xs text-ink hover:border-iris/60 transition-colors"
           >
-            <OverviewIcon size={14} /> 全局数据看板
+            <OverviewIcon size={14} /> 全局总览
           </button>
           {entries.map(({ workspace, target }) => {
             const Icon = workspace.icon

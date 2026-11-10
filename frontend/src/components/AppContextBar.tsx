@@ -18,14 +18,15 @@ import {
   getFlowPosition,
   getNavItem,
   getRelatedItems,
+  getStudioGroup,
   getWorkspace,
   type NavItem,
 } from '../navigation'
-import type { AgentPane, ViewMode } from '../appRoutes'
+import type { AgentPane, StudioPane, ViewMode } from '../appRoutes'
 
 interface AppContextBarProps {
   view: ViewMode
-  pane?: AgentPane | null
+  pane?: AgentPane | StudioPane | null
   onNavigate: (item: NavItem) => void
 }
 
@@ -38,7 +39,18 @@ export default function AppContextBar({ view, pane, onNavigate }: AppContextBarP
   const related = getRelatedItems(item.id)
     .filter((entry) => entry.id !== flow?.prev?.id && entry.id !== flow?.next?.id)
     .slice(0, 2)
-  const isGlobalTool = view === 'ai' || view === 'search' || view === 'overview'
+  const isGlobalTool = view === 'ai' || view === 'search' || view === 'overview' || view === 'settings'
+  /**
+   * 不在主链路上的页面，给身份说明而不是留空。
+   * AI 创作的九个功能按五组并列，不属于任何线性链路，所以显示「功能组 · 当前功能」；
+   * 不能显示「出图链路 2/9」那种伪造的前后步骤。
+   */
+  const studioGroup = getStudioGroup(item.id)
+  const fallbackLabel = isGlobalTool
+    ? '全局入口'
+    : studioGroup
+      ? `${studioGroup.label} · ${item.label}`
+      : '支撑能力'
 
   return (
     <div className="flex-shrink-0 h-9 px-4 flex items-center gap-3 border-b border-line/60 bg-panel/40 backdrop-blur-md z-10">
@@ -85,7 +97,9 @@ export default function AppContextBar({ view, pane, onNavigate }: AppContextBarP
           )}
         </div>
       ) : (
-        <span className="hidden md:inline font-mono text-[10px] text-ink-subtle flex-shrink-0">支撑能力</span>
+        <span className="hidden md:inline font-mono text-[10px] text-ink-subtle flex-shrink-0">
+          {fallbackLabel}
+        </span>
       )}
 
       {/* 跨链路关联入口 */}

@@ -1801,3 +1801,573 @@ export async function getTrainingStatistics(): Promise<TrainingStatistics> {
   const { data } = await api.get('/training/statistics')
   return data
 }
+
+// ==================== AI 创作 · 素材库 ====================
+// 当前文件落本地磁盘（backend/data/media），换 OSS 时后端换实现、这里契约不变。
+
+export type MediaKind = 'product' | 'style' | 'result' | 'reference' | 'other'
+
+/** 虚拟目录 key：素材没有二级目录时归到这里，后端与前端共用同一个字面量 */
+export const UNCATEGORIZED = '_uncategorized'
+
+export interface MediaAsset {
+  id: number
+  original_name: string
+  /** 静态直链，形如 /api/media/files/2026/11/xxx.png（同源，可直接放 img src） */
+  url: string
+  mime: string
+  size: number
+  width: number | null
+  height: number | null
+  /** 一级目录 */
+  kind: MediaKind
+  /** 二级目录 key；空串 = 未归类。素材只存 key 不存目录 id，删目录不会连带删图 */
+  category: string
+  source: 'upload' | 'generated'
+  note: string | null
+  tags: string[]
+  parent_id: number | null
+  created_at: string | null
+}
+
+export interface MediaListResponse {
+  items: MediaAsset[]
+  total: number
+  page: number
+  page_size: number
+}
+
+/** 目录树节点：预置目录不可删，自定义目录可删（删目录只把素材移到「未归类」） */
+export interface MediaCategoryNode {
+  id: number
+  key: string
+  label: string
+  builtin: boolean
+  count: number
+}
+
+export interface MediaCategoryGroup {
+  kind: MediaKind
+  /** 生效中的显示名：用户改过就是自定义名，否则是代码默认名 */
+  label: string
+  /** 代码里的默认显示名，用于「恢复默认」 */
+  default_label: string
+  /** 是否被用户改过名 */
+  custom: boolean
+  count: number
+  children: MediaCategoryNode[]
+}
+
+export interface MediaCategoryTree {
+  groups: MediaCategoryGroup[]
+  uncategorized: number
+  total: number
+}
+
+export interface MediaStats {
+  total: number
+  total_size: number
+  by_kind: Array<{ kind: MediaKind; count: number; size: number }>
+  /** 按 (一级, 二级) 的计数；二级为空时后端回填 _uncategorized */
+  by_category: Array<{ kind: MediaKind; category: string; count: number }>
+  /** 磁盘实际文件数；比 total 多说明有无主文件 */
+  disk_count: number
+  disk_size: number
+  max_mb: number
+}
+
+export interface UploadMediaOptions {
+  kind?: MediaKind
+  /** 二级目录 key；传 UNCATEGORIZED 或不传都表示不归类 */
+  category?: string
+  note?: string
+  onProgress?: (percent: number) => void
+}
+
+export async function uploadMedia(
+  file: File,
+  options: UploadMediaOptions = {},
+): Promise<{ item: MediaAsset; reused: boolean }> {
+  const { kind = 'other', category, note, onProgress } = options
+  const form = new FormData()
+  form.append('file', file)
+  form.append('kind', kind)
+  if (category && category !== UNCATEGORIZED) form.append('category', category)
+  if (note) form.append('note', note)
+  const { data } = await api.post('/media/upload', form, {
+    timeout: 120000,
+    onUploadProgress: (event) => {
+      if (onProgress && event.total) onProgress(Math.round((event.loaded / event.total) * 100))
+    },
+  })
+  return data
+}
+
+export async function listMedia(params: {
+  kind?: MediaKind | 'all'
+  category?: string
+  q?: string
+  /** 按 id 精确取，用于任务回显已选素材（不受「最近 100 张」限制） */
+  ids?: number[]
+  page?: number
+  page_size?: number
+} = {}): Promise<MediaListResponse> {
+  const { data } = await api.get('/media/list', { params })
+  return data
+}
+
+/** 按 id 精确取一张素材；用于即席处理完成后回显新产出的结果图 */
+export async function getMediaAsset(id: number): Promise<{ items: MediaAsset | null }> {
+  const data = await listMedia({ ids: [id], page_size: 1 })
+  return { items: data.items[0] ?? null }
+}
+
+export async function getMediaStats(): Promise<MediaStats> {
+  const { data } = await api.get('/media/stats')
+  return data
+}
+
+export async function getMediaCategories(): Promise<MediaCategoryTree> {
+  const { data } = await api.get('/media/categories')
+  return data
+}
+
+export async function createMediaCategory(
+  kind: MediaKind,
+  label: string,
+): Promise<{ item: MediaCategoryNode; tree: MediaCategoryTree }> {
+  const { data } = await api.post('/media/categories', { kind, label })
+  return data
+}
+
+export async function deleteMediaCategory(
+  id: number,
+): Promise<{ ok: boolean; id: number; moved: number; tree: MediaCategoryTree }> {
+  const { data } = await api.delete(`/media/categories/${id}`)
+  return data
+}
+
+/** 改一级目录的显示名；key 不变，所以所有按 key 的契约都不受影响 */
+export async function setMediaKindLabel(
+  key: MediaKind,
+  label: string,
+): Promise<{ item: { key: MediaKind; label: string; custom: boolean }; tree: MediaCategoryTree }> {
+  const { data } = await api.patch(`/media/kind-labels/${key}`, { label })
+  return data
+}
+
+/** 恢复代码默认的一级显示名 */
+export async function resetMediaKindLabel(
+  key: MediaKind,
+): Promise<{ item: { key: MediaKind; label: string; custom: boolean }; tree: MediaCategoryTree }> {
+  const { data } = await api.delete(`/media/kind-labels/${key}`)
+  return data
+}
+
+export async function updateMedia(
+  id: number,
+  patch: { kind?: MediaKind; category?: string; note?: string; tags?: string[] },
+): Promise<{ item: MediaAsset }> {
+  const { data } = await api.patch(`/media/${id}`, patch)
+  return data
+}
+
+export async function deleteMedia(id: number): Promise<{ ok: boolean; id: number }> {
+  const { data } = await api.delete(`/media/${id}`)
+  return data
+}
+
+// ==================== AI 创作 · 两阶段出图任务 ====================
+// 规划（rule）→ 人工确认 → 后台执行（当前为 mock 占位图，接口 /api/studio/engine 会标明）
+
+export type StudioTaskKind = 'set' | 'style' | 'sku' | 'outfit' | 'retouch'
+export type StudioTaskStatus = 'queued' | 'planning' | 'planned' | 'generating' | 'done' | 'failed' | 'cancelled'
+
+export interface StudioShot {
+  index: number
+  title: string
+  size: string
+  composition: string
+  copy: string
+  prompt: string
+  /** 该功能专属的规划元信息（如 SKU 的底图 / 新 SKU、精修的修复项），前端只渲染不解释 */
+  meta: Array<{ label: string; value: string }>
+  /** 这一镜头要做的动作，网关据此挑有对应能力的端点 */
+  capability?: string
+  endpoint_key?: string
+  endpoint_name?: string
+  endpoint_ready?: boolean
+  endpoint_options?: Array<{ key: string; name: string; protocol: string }>
+}
+
+export interface StudioPlan {
+  engine: string
+  kind: StudioTaskKind
+  summary: string
+  shots: StudioShot[]
+  warnings: string[]
+  inputs: Array<{ id: number; name: string; url: string }>
+  /** 本次任务指定的端点；auto 表示按服务绑定链分派 */
+  endpoint_key?: string
+  endpoint_warning?: string
+}
+
+/** 功能专属配置：slots 是有角色的素材位，fields 是该功能独有选项 */
+export interface StudioTaskConfig {
+  slots: Record<string, number[]>
+  fields: Record<string, string | string[]>
+}
+
+export interface StudioTaskOutput {
+  engine: string
+  assets: Array<{
+    media_id: number
+    url: string
+    index: number
+    shot_title: string
+    capability?: string
+    endpoint_key?: string
+    endpoint_name?: string
+    is_mock?: boolean
+  }>
+  /** 逐镜头的实际路由结果：命中了哪个端点、试过哪些、失败原因 */
+  routes?: Array<{
+    index: number
+    capability: string
+    endpoint_key: string
+    endpoint_name: string
+    protocol: string
+    is_mock: boolean
+    latency_ms: number
+    attempts: Array<{ endpoint: string; ok: boolean; error?: string; protocol?: string }>
+  }>
+  endpoint_key?: string
+}
+
+export interface StudioTask {
+  id: number
+  task_no: string
+  kind: StudioTaskKind
+  status: StudioTaskStatus
+  input: {
+    asset_ids: number[]
+    count: number
+    ratio: string
+    note: string
+    config?: StudioTaskConfig
+    endpoint_key?: string | null
+    endpoint_params?: Record<string, unknown>
+  }
+  plan: StudioPlan | null
+  outputs: StudioTaskOutput | null
+  progress: number
+  total_shots: number
+  done_shots: number
+  error: string | null
+  created_at: string | null
+  updated_at: string | null
+  started_at: string | null
+  finished_at: string | null
+}
+
+export interface StudioEngineInfo {
+  planner: string
+  planner_label: string
+  image_engine: string
+  image_engine_label: string
+  is_mock: boolean
+  endpoint_count?: number
+  ratios: string[]
+  max_shots: number
+  kinds: Array<{ kind: StudioTaskKind; label: string }>
+}
+
+export async function getStudioEngine(): Promise<StudioEngineInfo> {
+  const { data } = await api.get('/studio/engine')
+  return data
+}
+
+export async function createStudioTask(payload: {
+  kind: StudioTaskKind
+  asset_ids: number[]
+  count: number
+  ratio: string
+  note?: string
+  config?: StudioTaskConfig
+  /** 本次覆盖用哪个端点；留空 = 按服务绑定链自动分派 */
+  endpoint_key?: string
+  endpoint_params?: Record<string, unknown>
+}): Promise<{ item: StudioTask }> {
+  const { data } = await api.post('/studio/tasks', payload)
+  return data
+}
+
+export async function listStudioTasks(params: {
+  kind?: string
+  status?: string
+  page?: number
+  page_size?: number
+} = {}): Promise<{ items: StudioTask[]; total: number; page: number; page_size: number }> {
+  const { data } = await api.get('/studio/tasks', { params })
+  return data
+}
+
+export async function getStudioTask(id: number): Promise<{ item: StudioTask }> {
+  const { data } = await api.get(`/studio/tasks/${id}`)
+  return data
+}
+
+export async function confirmStudioTask(id: number): Promise<{ item: StudioTask; queued: boolean }> {
+  const { data } = await api.post(`/studio/tasks/${id}/confirm`)
+  return data
+}
+
+export async function cancelStudioTask(id: number): Promise<{ item: StudioTask }> {
+  const { data } = await api.post(`/studio/tasks/${id}/cancel`)
+  return data
+}
+
+export async function retryStudioTask(id: number): Promise<{ item: StudioTask; queued: boolean }> {
+  const { data } = await api.post(`/studio/tasks/${id}/retry`)
+  return data
+}
+
+// ==================== 设置 · 模型信息 ====================
+// 只管「板块用哪个模型」；API Key / base_url 在 .env，接口不回显也不接收密钥。
+
+export type ModelCapability = 'chat' | 'embedding' | 'image'
+export type ModelSlotStatus = 'active' | 'planned'
+
+export interface ModelProviderInfo {
+  key: string
+  label: string
+  capability: ModelCapability
+  configured: boolean
+  base_url: string
+  default_model: string
+  env_key: string
+  env_base: string
+  hint: string
+}
+
+export interface ModelSlot {
+  key: string
+  label: string
+  desc: string
+  group: string
+  capability: ModelCapability
+  status: ModelSlotStatus
+  hint: string
+  /** 用户选择：auto 或具体 provider */
+  provider: string
+  /** 用户填写的模型名；空串 = 用 provider 默认模型 */
+  model: string
+  custom: boolean
+  allowed_providers: string[]
+  default_model: string
+  effective_provider: string
+  effective_model: string
+  effective_base_url: string
+  configured: boolean
+  source: 'default' | 'override'
+}
+
+export interface ModelSettingsResponse {
+  groups: { id: string; label: string; hint: string }[]
+  providers: ModelProviderInfo[]
+  slots: ModelSlot[]
+  note: string
+}
+
+export interface ModelSlotChoice {
+  provider: string
+  model: string
+}
+
+export interface ModelTestResult {
+  slot: string
+  provider: string
+  model: string
+  base_url?: string
+  configured?: boolean
+  ok: boolean
+  skipped?: boolean
+  latency_ms?: number
+  sample?: string
+  detail: string
+}
+
+export async function getModelSettings(): Promise<ModelSettingsResponse> {
+  const { data } = await api.get('/model-settings')
+  return data
+}
+
+export async function saveModelSettings(
+  slots: Record<string, ModelSlotChoice>,
+): Promise<{ saved: string[] } & ModelSettingsResponse> {
+  const { data } = await api.put('/model-settings', { slots })
+  return data
+}
+
+export async function resetModelSetting(
+  slot: string,
+): Promise<{ reset: string } & ModelSettingsResponse> {
+  const { data } = await api.delete(`/model-settings/${encodeURIComponent(slot)}`)
+  return data
+}
+
+/** 保存前也能用临时 provider/model 试跑；不会写库 */
+export async function testModelSetting(payload: {
+  slot: string
+  provider?: string
+  model?: string
+}): Promise<ModelTestResult> {
+  const { data } = await api.post('/model-settings/test', payload, { timeout: 40000 })
+  return data
+}
+
+// ==================== AI 创作 · 图像端点池 ====================
+// 端点是一等数据：可任意多个；服务绑定候选链；运行时再选本次用哪个。
+
+export interface ImageEndpoint {
+  key: string
+  name: string
+  protocol: string
+  base_url: string
+  model: string
+  auth_mode: 'none' | 'env' | 'inline'
+  api_key_env: string
+  secret_source: string
+  secret_masked: string
+  secret_ready: boolean
+  capabilities: string[]
+  params: Record<string, unknown>
+  max_refs: number
+  timeout_s: number
+  enabled: boolean
+  priority: number
+  note: string
+  created_at: string | null
+}
+
+export interface ImageEndpointPayload {
+  key?: string
+  name: string
+  protocol: string
+  base_url: string
+  model: string
+  auth_mode: 'none' | 'env' | 'inline'
+  api_key_env: string
+  api_key_inline: string
+  capabilities: string[]
+  params: Record<string, unknown>
+  max_refs: number
+  timeout_s: number
+  enabled: boolean
+  priority: number
+  note: string
+}
+
+export interface ImageBinding {
+  id: number
+  service: string
+  capability: string
+  endpoint_key: string
+  priority: number
+  enabled: boolean
+}
+
+export interface ImageEndpointsResponse {
+  capabilities: Array<{ key: string; label: string }>
+  protocols: Array<{ key: string; label: string }>
+  services: Array<{ key: string; label: string }>
+  endpoints: ImageEndpoint[]
+  bindings: ImageBinding[]
+  note: string
+}
+
+export interface ImageEndpointTestResult {
+  ok: boolean
+  skipped?: boolean
+  key: string
+  latency_ms?: number
+  detail: string
+  attempts?: Array<{ endpoint: string; ok: boolean; error?: string }>
+  bytes?: number
+}
+
+export interface ImageProcessJob {
+  id: number
+  job_no: string
+  asset_id: number
+  operation: string
+  endpoint_key: string | null
+  params: Record<string, unknown>
+  status: string
+  result_asset_id: number | null
+  engine: string | null
+  used_endpoint: string | null
+  latency_ms: number | null
+  error: string | null
+  created_at: string | null
+  finished_at: string | null
+}
+
+export async function getImageEndpoints(): Promise<ImageEndpointsResponse> {
+  const { data } = await api.get('/image/endpoints')
+  return data
+}
+
+export async function createImageEndpoint(payload: ImageEndpointPayload): Promise<ImageEndpointsResponse> {
+  const { data } = await api.post('/image/endpoints', payload)
+  return data
+}
+
+export async function updateImageEndpoint(key: string, payload: ImageEndpointPayload): Promise<ImageEndpointsResponse> {
+  const { data } = await api.patch(`/image/endpoints/${encodeURIComponent(key)}`, payload)
+  return data
+}
+
+export async function deleteImageEndpoint(key: string): Promise<ImageEndpointsResponse> {
+  const { data } = await api.delete(`/image/endpoints/${encodeURIComponent(key)}`)
+  return data
+}
+
+export async function testImageEndpoint(key: string): Promise<ImageEndpointTestResult> {
+  const { data } = await api.post(`/image/endpoints/${encodeURIComponent(key)}/test`, {}, { timeout: 120000 })
+  return data
+}
+
+export async function setImageBindings(
+  service: string,
+  keys: string[],
+  capability = '',
+): Promise<ImageEndpointsResponse> {
+  const { data } = await api.put('/image/bindings', { service, capability, keys })
+  return data
+}
+
+export async function processImageAsset(payload: {
+  asset_id: number
+  operation: string
+  endpoint_key?: string
+  params?: Record<string, unknown>
+}): Promise<{ item: ImageProcessJob; queued: boolean }> {
+  const { data } = await api.post('/image/process', payload)
+  return data
+}
+
+export async function listImageJobs(params: {
+  asset_id?: number
+  page?: number
+  page_size?: number
+} = {}): Promise<{ items: ImageProcessJob[]; total: number }> {
+  const { data } = await api.get('/image/jobs', { params })
+  return data
+}
+
+/** 单图即席处理的动作字典；与端点池的能力标签同源，不要前端另写一份 */
+export async function getImageOperations(): Promise<{ items: Array<{ key: string; label: string }> }> {
+  const { data } = await api.get('/image/operations')
+  return data
+}

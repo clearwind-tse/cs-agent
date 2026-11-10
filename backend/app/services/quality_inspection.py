@@ -47,7 +47,7 @@ class QualityInspectionConfig:
     name: str = "通用客服标准"
     description: str = "适用于一般客服会话的通用质检标准"
     business_persona: str = "你是某平台的在线客服"   # ★业务人设参数化，不写死具体品牌
-    model: str = "deepseek-chat"                    # 可切 gpt-4o-mini
+    model: str = ""                                 # 空 = 跟随设置页「质检与质量评分」板块；填了则本套标准单独覆盖
     dimensions: List[DimensionConfig] = field(default_factory=list)
     violations: List[ViolationTypeConfig] = field(default_factory=list)
     pass_threshold: float = 60.0                    # 及格线
@@ -62,7 +62,7 @@ def default_qc_config() -> QualityInspectionConfig:
         name="通用客服标准",
         description="客服质检通用标准：从实战性、需求把握、策略、话术自然度、红线检查五个维度逐题打分，AI 评分仅作初评。",
         business_persona="你是某平台/机构的客服或销售顾问，负责服务客户、解答咨询并推进业务。",
-        model="deepseek-chat",
+        model="",
         dimensions=[
             DimensionConfig(
                 key="practicality", name="实战性", weight=0.20,
@@ -142,7 +142,7 @@ def config_from_dict(data: Dict[str, Any]) -> QualityInspectionConfig:
             name=data.get("name", "通用客服标准"),
             description=data.get("description", ""),
             business_persona=data.get("business_persona", "你是某平台的在线客服。"),
-            model=data.get("model", "deepseek-chat"),
+            model=data.get("model", ""),
             dimensions=dims,
             violations=viols,
             pass_threshold=float(data.get("pass_threshold", 60.0)),
@@ -198,20 +198,11 @@ class QualityInspectionService:
 
     # ---------- LLM 客户端（带 timeout） ----------
     def _build_llm_client(self):
+        """连接信息取设置页「质检与质量评分」板块；模型名可由本套质检标准单独覆盖"""
         try:
-            from openai import OpenAI
-            if settings.deepseek_api_key:
-                return OpenAI(
-                    api_key=settings.deepseek_api_key,
-                    base_url=settings.deepseek_base_url,
-                    timeout=self.config.timeout_seconds,
-                )
-            elif settings.openai_api_key:
-                return OpenAI(
-                    api_key=settings.openai_api_key,
-                    base_url=settings.openai_base_url,
-                    timeout=self.config.timeout_seconds,
-                )
+            from app.services.model_registry import openai_client
+            client, _model = openai_client("qc", timeout=self.config.timeout_seconds)
+            return client
         except Exception as e:
             print(f"[WARN] 质检 LLM client 初始化失败: {e}")
         return None
@@ -381,10 +372,12 @@ class QualityInspectionService:
 
     # ---------- LLM 调用（重试） ----------
     def _call_llm_with_retry(self, prompt: str) -> Optional[str]:
+        from app.services.model_registry import resolve
+        model = self.config.model or resolve("qc").model
         for attempt in range(self.config.max_retries + 1):
             try:
                 resp = self.client.chat.completions.create(
-                    model=self.config.model,
+                    model=model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0,
                     max_tokens=1200,

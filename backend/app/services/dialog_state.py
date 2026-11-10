@@ -620,7 +620,7 @@ def llm_extract_entities(message: str, state: DialogState) -> Dict[str, Any]:
         return {}
     try:
         from app.services.quiz import _get_llm_client
-        client, model = _get_llm_client()
+        client, model = _get_llm_client("chat")
         if client is None:
             return {}
         resp = client.chat.completions.create(

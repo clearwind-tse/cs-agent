@@ -11,7 +11,7 @@
  *
  * 视觉约束：全部使用 ui/ 里的既有组件与语义色令牌，不引入新配色 / 字体 / 依赖。
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import {
   AlertTriangle,
@@ -107,6 +107,8 @@ const DRILLS: Array<{
 
 interface OverviewViewProps {
   onNavigate: (item: NavItem) => void
+  /** 由 GlobalOverviewView 注入的视角切换 Tab */
+  tabs?: ReactNode
 }
 
 const formatNumber = (value: number | null | undefined): string =>
@@ -121,7 +123,7 @@ const ratio = (part: number | null | undefined, total: number | null | undefined
 const asPercent = (value: number | null | undefined): number | null =>
   value == null ? null : Math.round((value <= 1 ? value * 100 : value) * 10) / 10
 
-export default function OverviewView({ onNavigate }: OverviewViewProps) {
+export default function OverviewView({ onNavigate, tabs }: OverviewViewProps) {
   const [snapshot, setSnapshot] = useState<Snapshot>(EMPTY_SNAPSHOT)
   const [failedSources, setFailedSources] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -266,9 +268,12 @@ export default function OverviewView({ onNavigate }: OverviewViewProps) {
       <header className="px-4 md:px-6 pt-5 pb-4 border-b border-line/60 flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
         <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-subtle">Global Overview</p>
-          <h1 className="font-display text-xl font-bold text-ink mt-1">全局数据看板</h1>
+          <div className="flex flex-wrap items-center gap-3 mt-1">
+            <h1 className="font-display text-xl font-bold text-ink">全局总览</h1>
+            {tabs}
+          </div>
           <p className="text-[11px] text-ink-subtle mt-1">
-            汇总 7 个现有统计接口 · 按在线服务 / 数据治理 / 模型优化分组 · 点击卡片下钻
+            统计视角 · 汇总 7 个现有统计接口 · 按在线服务 / 数据治理 / 模型优化分组 · 点击卡片下钻
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

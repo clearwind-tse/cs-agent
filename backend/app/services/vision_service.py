@@ -46,23 +46,27 @@ EXTRACT_PROMPT = """你是一个专业的数据提取助手。请仔细识别图
 ```"""
 
 _client: Optional[OpenAI] = None
+_client_signature: Optional[tuple] = None
 
 
 def _get_vision_client() -> OpenAI:
-    """获取 OpenAI 兼容客户端（火山方舟）"""
-    global _client
-    if _client is None:
-        settings = get_settings()
-        # 优先使用视觉模型专用 Key，回退到通用 Key
-        api_key = settings.ark_vision_api_key or settings.ark_api_key
-        if not api_key:
-            raise RuntimeError(
-                "火山方舟 API Key 未配置。请设置环境变量 ARK_VISION_API_KEY 或 ARK_API_KEY。"
-            )
-        _client = OpenAI(
-            api_key=api_key,
-            base_url=settings.ark_vision_base_url,
+    """获取 OpenAI 兼容客户端（火山方舟）。
+
+    连接信息取设置页「图片信息提取」板块；按 key+base_url 做签名缓存，
+    这样在设置页换 provider 之后不会继续复用旧 client。
+    """
+    from app.services.model_registry import resolve
+
+    global _client, _client_signature
+    r = resolve("vision")
+    if not r.configured:
+        raise RuntimeError(
+            "视觉模型 API Key 未配置。请在 .env 设置 ARK_VISION_API_KEY（或回退用的 ARK_API_KEY）。"
         )
+    signature = (r.api_key, r.base_url)
+    if _client is None or _client_signature != signature:
+        _client = OpenAI(api_key=r.api_key, base_url=r.base_url)
+        _client_signature = signature
     return _client
 
 
@@ -116,7 +120,7 @@ def extract_students_from_image(
             "raw_text": "...",  # 模型原始响应（用于调试）
         }
     """
-    settings = get_settings()
+    from app.services.model_registry import resolve
     client = _get_vision_client()
 
     # 将图片转为 base64 data URL
@@ -125,7 +129,7 @@ def extract_students_from_image(
 
     # 调用豆包视觉模型
     response = client.chat.completions.create(
-        model=settings.ark_vision_model,
+        model=resolve("vision").model,
         messages=[
             {
                 "role": "system",

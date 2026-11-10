@@ -1,5 +1,6 @@
 export type ViewMode =
   | 'overview'
+  | 'studio'
   | 'chat'
   | 'search'
   | 'ai'
@@ -9,6 +10,7 @@ export type ViewMode =
   | 'extractor'
   | 'quiz'
   | 'training'
+  | 'settings'
 
 /**
  * 智能客服 Agent 工作台的子页面。
@@ -16,6 +18,15 @@ export type ViewMode =
  * 用 URL 子路径表达，保证刷新和分享链接都能落到同一页。
  */
 export type AgentPane = 'chat' | 'ticket' | 'skill' | 'config'
+
+/**
+ * AI 创作的子页面。
+ *
+ * 这一组是从 picsetai 那类「商品图生产」产品复刻过来的能力，
+ * 与本项目的客服链路无关，因此单独成一个工作区，用 URL 子路径表达，
+ * 保证刷新、分享、回退都能落到同一个功能。
+ */
+export type StudioPane = 'home' | 'set' | 'style' | 'sku' | 'outfit' | 'retouch' | 'canvas' | 'assets' | 'endpoints'
 
 const AGENT_PANE_PATHS: Record<AgentPane, string> = {
   chat: '/agent',
@@ -38,8 +49,40 @@ export const getAgentPaneFromPath = (pathname: string): AgentPane => {
   return PATH_TO_AGENT_PANE[normalized] ?? 'chat'
 }
 
+const STUDIO_PANE_PATHS: Record<StudioPane, string> = {
+  home: '/studio',
+  set: '/studio/set',
+  style: '/studio/style',
+  sku: '/studio/sku',
+  outfit: '/studio/outfit',
+  retouch: '/studio/retouch',
+  canvas: '/studio/canvas',
+  assets: '/studio/assets',
+  endpoints: '/studio/endpoints',
+}
+
+const PATH_TO_STUDIO_PANE: Record<string, StudioPane> = {
+  '/studio': 'home',
+  '/studio/set': 'set',
+  '/studio/style': 'style',
+  '/studio/sku': 'sku',
+  '/studio/outfit': 'outfit',
+  '/studio/retouch': 'retouch',
+  '/studio/canvas': 'canvas',
+  '/studio/assets': 'assets',
+  '/studio/endpoints': 'endpoints',
+}
+
+export const buildStudioPath = (pane: StudioPane): string => STUDIO_PANE_PATHS[pane]
+
+export const getStudioPaneFromPath = (pathname: string): StudioPane => {
+  const normalized = pathname.replace(/\/+$/, '') || '/'
+  return PATH_TO_STUDIO_PANE[normalized] ?? 'home'
+}
+
 const VIEW_PATHS: Record<Exclude<ViewMode, 'chat'>, string> = {
   overview: '/overview',
+  studio: '/studio',
   search: '/search',
   ai: '/ai',
   agent: '/agent',
@@ -48,6 +91,7 @@ const VIEW_PATHS: Record<Exclude<ViewMode, 'chat'>, string> = {
   extractor: '/extractor',
   quiz: '/quiz',
   training: '/training',
+  settings: '/settings',
 }
 
 export const getViewModeFromPath = (pathname: string): ViewMode => {
@@ -66,6 +110,11 @@ export const getViewModeFromPath = (pathname: string): ViewMode => {
   // /agent 及其子页面（/agent/ticket 等）都属于 Agent 视图
   if (normalized === '/agent' || normalized.startsWith('/agent/')) {
     return 'agent'
+  }
+
+  // /studio 及其子页面（/studio/set 等）都属于 AI 创作视图
+  if (normalized === '/studio' || normalized.startsWith('/studio/')) {
+    return 'studio'
   }
 
   for (const [viewMode, path] of Object.entries(VIEW_PATHS)) {

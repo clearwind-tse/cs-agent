@@ -229,21 +229,17 @@ class KnowledgeExtractor:
         return self._parse_json_response(raw_text)
 
     def _call_llm(self, prompt: str) -> str:
-        """调用 LLM（优先 ark/dashscope → deepseek → openai）"""
+        """调用 LLM；provider / 模型取设置页「知识抽取」板块"""
         from openai import OpenAI
+        from app.services.model_registry import resolve
 
-        if settings.ark_api_key and settings.ark_base_url:
-            api_key, base_url, model = settings.ark_api_key, settings.ark_base_url, "qwen-plus"
-        elif settings.deepseek_api_key:
-            api_key, base_url, model = settings.deepseek_api_key, settings.deepseek_base_url, "deepseek-chat"
-        elif settings.openai_api_key:
-            api_key, base_url, model = settings.openai_api_key, settings.openai_base_url, "gpt-4o-mini"
-        else:
-            raise RuntimeError("未配置任何 LLM API (ark/deepseek/openai)")
+        r = resolve("extract")
+        if not r.configured:
+            raise RuntimeError("未配置 LLM API：请在 .env 设置密钥，或在设置页选一个已配置的 provider")
 
-        client = OpenAI(api_key=api_key, base_url=base_url)
+        client = OpenAI(api_key=r.api_key, base_url=r.base_url)
         response = client.chat.completions.create(
-            model=model,
+            model=r.model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1,
             max_tokens=2000,

@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PicsetAI 深度拆解与复刻落地方案</title>
+<style>
+  :root{
+    --paper:#f6f4f0; --card:#fffdfa; --ink:#1a1713; --ink2:#3d3833; --muted:#7c746c;
+    --line:#e5dfd6; --line2:#f0ebe3;
+    --accent:#b8451f; --accent-soft:#fbeee7;
+    --teal:#0f6b62; --teal-soft:#e6f2f0;
+    --amber:#8a5a00; --amber-soft:#fdf3dd;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.78;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 28px 120px}
+  /* cover */
+  header.cover{padding:96px 0 56px;border-bottom:1px solid var(--line);position:relative;overflow:hidden}
+  header.cover::before{content:"";position:absolute;inset:-40% -10% auto auto;width:520px;height:520px;
+    background:radial-gradient(circle at 50% 50%,rgba(184,69,31,.10),transparent 62%);pointer-events:none}
+  .kicker{font:600 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+  h1{font-size:clamp(30px,4.4vw,46px);line-height:1.2;letter-spacing:-.02em;margin:18px 0 14px;font-weight:800}
+  .sub{font-size:17px;color:var(--ink2);max-width:760px;margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:30px;font:12px/1.6 var(--mono);color:var(--muted)}
+  .meta b{color:var(--ink2);font-weight:600}
+  /* layout */
+  .layout{display:grid;grid-template-columns:1fr;gap:0}
+  @media(min-width:1180px){
+    .layout{grid-template-columns:225px minmax(0,1fr);gap:56px}
+    nav.toc{position:sticky;top:28px;align-self:start;max-height:calc(100vh - 56px);overflow:auto;padding:26px 0}
+    nav.toc ol{list-style:none;margin:0;padding:0;font-size:13px}
+    nav.toc li{margin:0 0 2px}
+    nav.toc a{display:block;padding:5px 10px;border-left:2px solid transparent;color:var(--muted);border-radius:0 6px 6px 0}
+    nav.toc a:hover{color:var(--ink);background:var(--line2);text-decoration:none;border-left-color:var(--line)}
+    nav.toc a.on{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:600}
+    nav.toc .grp{font:600 10px/1 var(--mono);letter-spacing:.16em;color:#a89f95;padding:16px 10px 6px}
+  }
+  @media(max-width:1179px){ nav.toc{display:none} }
+  main{padding-top:20px;min-width:0}
+  section{padding:54px 0 8px;border-bottom:1px solid var(--line2)}
+  section:last-of-type{border-bottom:none}
+  h2{font-size:26px;line-height:1.35;letter-spacing:-.01em;margin:0 0 6px;font-weight:800;display:flex;align-items:baseline;gap:12px}
+  h2 .num{font:700 13px/1 var(--mono);color:var(--accent);letter-spacing:.06em;padding-top:4px}
+  .lede{color:var(--ink2);margin:10px 0 26px;max-width:820px}
+  h3{font-size:18px;margin:34px 0 10px;font-weight:750;letter-spacing:-.005em}
+  h4{font-size:14.5px;margin:22px 0 8px;font-weight:700;color:var(--ink2)}
+  p{margin:0 0 12px}
+  ul,ol{margin:0 0 14px;padding-left:22px}
+  li{margin:5px 0}
+  small{color:var(--muted)}
+  code{font:12.5px/1.6 var(--mono);background:#f0ebe4;padding:1.5px 5px;border-radius:4px;color:#4a3d32;word-break:break-word}
+  pre{background:#1e1b17;color:#e8e2d9;padding:18px 20px;border-radius:10px;overflow:auto;font:12.5px/1.72 var(--mono);margin:14px 0 18px}
+  pre .c{color:#8f857a}
+  pre .k{color:#e0a06a}
+  pre .s{color:#a8c98f}
+  /* blocks */
+  .grid{display:grid;gap:14px}
+  @media(min-width:760px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  .card h5{margin:0 0 6px;font-size:14px;font-weight:700}
+  .card p{margin:0;font-size:13.5px;color:var(--ink2)}
+  .tl{display:flex;flex-direction:column;gap:0;margin:18px 0 8px;border-left:2px solid var(--line);padding-left:0}
+  .tl .step{position:relative;padding:0 0 20px 26px}
+  .tl .step::before{content:"";position:absolute;left:-7px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--card);border:2.5px solid var(--accent)}
+  .tl .step b{display:block;font-size:14.5px;margin-bottom:3px}
+  .tl .step span{font-size:13.5px;color:var(--ink2)}
+  .tl .step em{font-style:normal;font:600 11px/1 var(--mono);color:var(--muted);margin-right:8px}
+  table{width:100%;border-collapse:collapse;margin:16px 0 20px;font-size:13.5px;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line2);vertical-align:top}
+  th{background:#f1ece4;font-weight:700;font-size:12.5px;color:var(--ink2);white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  th:first-child,td:first-child{min-width:92px;word-break:keep-all}
+  .tbl-wrap table{min-width:680px}
+  td code{font-size:11.5px}
+  .tbl-wrap{overflow-x:auto}
+  .chip{display:inline-block;font:600 10.5px/1 var(--mono);letter-spacing:.04em;padding:4px 7px;border-radius:5px;vertical-align:middle;white-space:nowrap}
+  .p0{background:#fbe3d9;color:#96351a}
+  .p1{background:var(--amber-soft);color:var(--amber)}
+  .p2{background:#eceee9;color:#5b6155}
+  .ev{background:#eef2f6;color:#3c5871}
+  .inf{background:var(--teal-soft);color:var(--teal)}
+  blockquote{margin:18px 0;padding:14px 18px;background:var(--card);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;font-size:13.5px;color:var(--ink2)}
+  blockquote b{color:var(--ink)}
+  .note{background:var(--amber-soft);border:1px solid #f0dfb8;border-radius:10px;padding:14px 18px;font-size:13.5px;margin:16px 0}
+  .note b{color:var(--amber)}
+  .win{background:var(--teal-soft);border:1px solid #cfe3df;border-radius:10px;padding:14px 18px;font-size:13.5px;margin:16px 0}
+  .win b{color:var(--teal)}
+  .kv{display:grid;grid-template-columns:112px 1fr;gap:8px 14px;font-size:13.5px;margin:12px 0}
+  .kv dt{color:var(--muted);font:12px/1.7 var(--mono)}
+  .kv dd{margin:0}
+  figure{margin:22px 0}
+  figcaption{font-size:12px;color:var(--muted);margin-top:8px;text-align:center}
+  /* bars */
+  .bars{display:flex;flex-direction:column;gap:9px;margin:16px 0}
+  .bar{display:grid;grid-template-columns:150px 1fr 54px;align-items:center;gap:10px;font-size:12.5px}
+  .bar .t{color:var(--ink2)}
+  .bar .track{display:block;height:16px;background:#efe9e1;border-radius:4px;overflow:hidden}
+  .bar .fill{display:block;height:100%;background:linear-gradient(90deg,#c9603a,#b8451f);border-radius:4px}
+  .bar .fill.t{background:linear-gradient(90deg,#2f8b80,#0f6b62)}
+  .bar .v{font:600 11.5px/1 var(--mono);color:var(--muted);text-align:right}
+  /* roadmap */
+  .road{display:grid;gap:12px;margin:18px 0}
+  .phase{display:grid;grid-template-columns:96px 1fr;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .phase .ph{font:700 11px/1.5 var(--mono);color:var(--accent);letter-spacing:.06em}
+  .phase .ph small{display:block;color:var(--muted);font:400 11px/1.6 var(--mono);letter-spacing:0}
+  .phase h5{margin:0 0 6px;font-size:14.5px}
+  .phase ul{margin:0;padding-left:18px;font-size:13.3px}
+  .phase .dod{margin-top:8px;font-size:12.5px;color:var(--teal);border-top:1px dashed var(--line);padding-top:8px}
+  footer{padding:40px 0 0;font-size:12px;color:var(--muted);border-top:1px solid var(--line);margin-top:50px}
+  .print-tip{position:fixed;right:22px;bottom:22px;background:var(--ink);color:#fff;font:12px/1 var(--sans);padding:10px 14px;border-radius:20px;opacity:.82}
+  @media print{.print-tip,nav.toc{display:none}body{background:#fff}section{page-break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="cover">
+  <div class="kicker">Product Teardown · Replication Plan</div>
+  <h1>把 PicsetAI 拆到能开工的粒度</h1>
+  <p class="sub">对 picsetai.cn 做逐功能逆向拆解：13 个前台模块、1 套后台配置中枢、4 层生成流水线，并给出 20 周内可交付的复刻路线、数据模型、提示词骨架与成本测算。</p>
+  <div class="meta">
+    <span><b>分析对象</b> picsetai.cn（国内站）</span>
+    <span><b>日期</b> 2026-11-08</span>
+    <span><b>方法</b> 公开页面 + 前端构建产物逆向 + 公开资料交叉</span>
+    <span><b>结论</b> 可复刻，真正的门槛不在生图</span>
+  </div>
+</header>
+
+<div class="layout">
+<nav class="toc" id="toc">
+  <div class="grp">拆解</div>
+  <ol>
+    <li><a href="#s1">01 一句话结论</a></li>
+    <li><a href="#s2">02 全站功能地图</a></li>
+    <li><a href="#s3">03 逐功能拆解</a></li>
+  </ol>
+  <div class="grp">工程</div>
+  <ol start="4">
+    <li><a href="#s4">04 技术架构还原</a></li>
+    <li><a href="#s5">05 数据模型</a></li>
+    <li><a href="#s6">06 生成流水线</a></li>
+    <li><a href="#s7">07 提示词资产体系</a></li>
+  </ol>
+  <div class="grp">商业</div>
+  <ol start="8">
+    <li><a href="#s8">08 积分与成本</a></li>
+    <li><a href="#s9">09 20 周路线图</a></li>
+    <li><a href="#s10">10 八个真难点</a></li>
+    <li><a href="#s11">11 不要照抄的地方</a></li>
+    <li><a href="#s12">12 合规与风险</a></li>
+    <li><a href="#a1">附录 A 功能清单</a></li>
+    <li><a href="#a2">附录 B 验收用例</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 1 ============ -->
+<section id="s1">
+  <h2><span class="num">01</span>一句话结论</h2>
+  <p class="lede">PicsetAI 不是一个「AI 生图工具」，而是<b>一条电商视觉的生产流水线</b>：用 LLM 把「一张商品图」翻译成「可编辑的设计规划」，再用图生图模型批量执行，最后用一块画布兜住二次修改。</p>
+
+  <div class="grid g3">
+    <div class="card"><h5>护城河 ①：两阶段生成</h5><p>分析 → <b>人工确认规划</b> → 批量出图。既降低废片率（省积分 = 省成本），又把"抽卡"变成"审稿"，这是它相对通用生图产品的核心体验差。</p></div>
+    <div class="card"><h5>护城河 ②：提示词资产</h5><p>约 40 组模板（组图分析 / SKU 三种替换 / 服装统一分析 / 模特策略 / 精修分析 / 分镜…），支持版本、diff、回滚、灰度、分区域分语言。这是最难被抄走的部分。</p></div>
+    <div class="card"><h5>护城河 ③：白标底座</h5><p>同一套前端按品牌配置切换（<code>picsetai-cn</code> / <code>liuyingai</code> / <code>pixmall-cn</code>），连模型名称都可改（Nano Banana → Nova 2.0）。一套代码卖多个站。</p></div>
+  </div>
+
+  <blockquote><b>复刻判断：</b>功能层面 8–10 周可做到 80% 可用（商品套图 + 风格复刻 + 画布 + 积分）；但「一次成片率」取决于提示词与测试集积累，需要 3–6 个月的品类样本喂养。<b>不要按"功能清单"排期，要按"质量爬坡"排期。</b></blockquote>
+
+  <div class="kv">
+    <dt>底层模型</dt><dd>Nano Banana 系（lite / 2 / 2.1 / pro）+ GPT-Image-2 / 2.5（sunburst、flare、vip）+ Seedream 5、Seedance 2.0、可灵 3.0、万相 3.0、MiniMax H3（视频）</dd>
+    <dt>规划模型</dt><dd>Gemini 3 Flash（对外叫 Nova-LM）/ 3.1 Pro（Nova-LM pro）/ 3.5 Flash</dd>
+    <dt>技术栈</dt><dd>React + Vite + Tailwind + radix + react-query + fabric.js + i18next；后端 Supabase（Postgres / Auth / Storage / Edge Functions / Realtime / pg_cron）</dd>
+    <dt>备案</dt><dd>浙ICP备2025168722号-2；主体「跳帧工场（杭州）科技有限公司」</dd>
+  </div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section id="s2">
+  <h2><span class="num">02</span>全站功能地图</h2>
+  <p class="lede">前台 13 个业务路由 + 6 个账户/运营路由 + 1 套超管后台。下表按「用户任务」而非「技术模块」排列，优先级是<b>复刻优先级</b>，不是原产品的重要性。</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>模块</th><th>路由</th><th>用户要完成的事</th><th>核心机制（拆解出的关键点）</th><th>优先级</th></tr></thead>
+    <tbody>
+      <tr><td><b>全品类商品图</b></td><td><code>/studio-genesis</code></td><td>一张实拍图 → 主图 / 详情图组</td><td>五步向导；LLM 产出「设计规范 + 图片规划」可编辑 JSON；详情 16 模块 / 主图 5 模块；目标平台 12+</td><td><span class="chip p0">P0</span></td></tr>
+      <tr><td><b>风格复刻</b></td><td><code>/aesthetic-mirror</code></td><td>抄一套爆款版式，换自己的产品</td><td>单图 / 批量 / SKU 替换三 tab；SKU 智能·局部·多场景三种分析器；只换主体不换背景排版</td><td><span class="chip p0">P0</span></td></tr>
+      <tr><td>SKU 替换</td><td><code>/sku-replace</code></td><td>同款多色/多规格批量出图</td><td>旧版兼容器；≤20 张 SKU 图，每张可单独填颜色/尺码；结果按 SKU 分组</td><td><span class="chip p0">P0</span></td></tr>
+      <tr><td><b>万能画布</b></td><td><code>/canvas-studio</code></td><td>出来不满意，就地改</td><td>fabric 图层树；智能分层 1.0/2.0（按层计费）；字体库；PSD 导出；工作流节点图 + Skill</td><td><span class="chip p0">P0</span></td></tr>
+      <tr><td>服装组图</td><td><code>/clothing-studio</code></td><td>服装图 → 模特试穿 + 基础套图</td><td>统一分析 → 策略（品牌大片/手机网感）→ 分镜；三视图；5 条身份锁定提示词</td><td><span class="chip p1">P1</span></td></tr>
+      <tr><td>图片精修</td><td><code>/refinement-studio</code></td><td>瑕疵 / 光影 / 背景 / 白底</td><td>双分析器（GPT-Image-2 / Nano Banana）；白底图是 SKU 替换的前置</td><td><span class="chip p1">P1</span></td></tr>
+      <tr><td>批量抠图</td><td><code>/batch-matting</code></td><td>批量透明底 / 白底</td><td>火山 veImageX；按「每积分成功次数」计费，失败不计</td><td><span class="chip p1">P1</span></td></tr>
+      <tr><td>批量翻译</td><td><code>/batch-translation</code></td><td>图内文字换语言，版式不变</td><td>千问 OCR → LLM 翻译 → 原位重绘；OCR 队列 QPS 独立限流</td><td><span class="chip p2">P2</span></td></tr>
+      <tr><td>视频工坊</td><td><code>/video-studio</code></td><td>商品图 → 带货短视频</td><td>脚本解析 → 文字分镜 → 多宫格标记图 → Seedance 生成 → 去字幕 → 超分</td><td><span class="chip p1">P1</span></td></tr>
+      <tr><td>买家秀</td><td><code>/buyer-show</code></td><td>真实感 UGC 晒图</td><td>产品 + 模特 + 场景；一键「裂变」衍生多张</td><td><span class="chip p2">P2</span></td></tr>
+      <tr><td>种草图 / 广告图</td><td><code>/grass-plant</code> <code>/ad-image</code></td><td>小红书风 / 信息流广告</td><td>风格池 + 文案池 + 广告类型（信息流·种草·橱窗·强促销）</td><td><span class="chip p2">P2</span></td></tr>
+      <tr><td>套餐与积分</td><td><code>/pricing</code></td><td>买积分 / 订阅</td><td>4 档套餐；一次性支付 + 周期扣款 + 分期；支付成功靠 Realtime + 轮询双保险</td><td><span class="chip p0">P0</span></td></tr>
+      <tr><td>会员中心 / 作品记录</td><td><code>/profile</code> <code>/history</code></td><td>找回作品、看积分、导出</td><td>项目制（project）聚合；批量下载 / 打包 / 进画布编辑</td><td><span class="chip p0">P0</span></td></tr>
+      <tr><td>推广分销</td><td><code>/invite</code> <code>/promoter</code></td><td>拉新返佣</td><td>邀请码门控；被邀请人首购返 5% 积分；代理需转化 5 个付费用户；次月 10 日结算</td><td><span class="chip p2">P2</span></td></tr>
+      <tr><td>开放 API</td><td><code>/developer-api</code></td><td>把能力接进别人的 Agent</td><td><code>agent-api-v1</code> 边缘函数 + API Key + 后台开关（可按品牌关闭）</td><td><span class="chip p1">P1</span></td></tr>
+      <tr><td><b>超管后台</b></td><td><code>/sys-management-picset</code></td><td>一切参数的开关</td><td>提示词 / 积分成本 / Provider 路由 / 监控告警 / 支付 / 企微 / SEO / 灰度 / 字体 / 公告</td><td><span class="chip p0">P0</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note"><b>注意一个设计选择：</b>买家秀、种草图、批量抠图、批量翻译、SKU 替换这些「小功能」都是独立路由，但共用同一套任务框架与积分引擎。表面上功能多，实际只有 <b>3 种任务形态</b>：<code>analyze→image</code>（图组）、<code>image→image</code>（单张/批量替换）、<code>tool</code>（抠图/翻译/OCR）。复刻时先做这 3 个执行器，功能就是配置。</div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section id="s3">
+  <h2><span class="num">03</span>逐功能拆解</h2>
+  <p class="lede">每个模块给四件事：<b>流程</b>（用户看到什么）、<b>参数面板</b>（有哪些旋钮）、<b>隐藏机制</b>（不写在界面上但决定体验的部分）、<b>复刻要点</b>（你要多做/少做什么）。</p>
+
+  <h3>3.1 全品类商品图 —— 全站的原型</h3>
+  <div class="tl">
+    <div class="step"><b><em>01</em>输入</b><span>产品图 0/6（多图上传有"不是越多越好"的提示）、主图 / 详情图二选一、目标平台（智能匹配 / 淘宝 / 天猫 / 拼多多 / 京东 / 抖音 / 亚马逊 / TEMU / eBay / SHEIN / Shopee / Lazada / TikTok）、主图要求或详情要求（自然语言）、AI 帮写、目标语言（含"无文字（纯视觉）"）、模型、尺寸比例、清晰度、生成数量、速度档。</span></div>
+    <div class="step"><b><em>02</em>分析中</b><span>按钮变"分析中"，禁止重复提交；服务端跑 LLM，产出结构化 JSON。</span></div>
+    <div class="step"><b><em>03</em>确认规划（关键一步）</b><span>左「整体设计规范」六段：字体系统（标题思源宋体 / 正文思源黑体 / 字号 3:1.8:1）、视觉语言（装饰元素、图标风格、留白 ≥30%）、摄影风格（光线、景深、相机参数 f/8 · 1/125s · ISO100）、品质要求、目标平台、图片规划；右「共 N 张」逐张标题 + 描述 + 展开的 `design_content`，每张都能改。底部显示"确认生成 4 张，消耗 28 积分（原价 40）"。</span></div>
+    <div class="step"><b><em>04</em>生成中</b><span>占位卡逐张替换，单张失败不影响整组（partial_failed）。</span></div>
+    <div class="step"><b><em>05</em>完成</b><span>批量下载 / 单张下载 / 进画布二次编辑 / 换风格重跑。</span></div>
+  </div>
+
+  <h4>参数面板背后的枚举（可直接复用）</h4>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>维度</th><th>取值</th><th>备注</th></tr></thead>
+    <tbody>
+      <tr><td>详情图模块</td><td>首屏主视觉 / 核心卖点 / 使用场景 / 多角度 / 场景氛围 / 商品细节 / 品牌故事 / 尺寸容量尺码 / 效果对比 / 详细规格参数表 / 工艺制作 / 配件赠品 / 系列展示 / 商品成分 / 售后保障 / 使用建议</td><td>共 16，后台可逐项上架</td></tr>
+      <tr><td>主图模块</td><td>首页图 / 白底首图 / 痛点图 / 细节图 / 全功能图</td><td>共 5</td></tr>
+      <tr><td>清晰度</td><td>0.5K（仅部分模型）/ 1K / 1.5K / 2K / 4K</td><td>影响单价</td></tr>
+      <tr><td>速度档</td><td>Standard / Fast / Turbo</td><td>Turbo 常置灰"敬请期待"</td></tr>
+      <tr><td>比例</td><td>1:1 / 3:4 / 4:3 / 16:9 / 9:16 / 3:2 / 2:3 / 4:5 / 5:4 / 21:9 / 1:4 / 4:1 / 1:8 / 8:1 / 自定义宽高</td><td>超长幅用于详情页拼接</td></tr>
+      <tr><td>区域分支</td><td>国内 / 国际 / A+（亚马逊）</td><td>同一模块三套子提示词</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="win"><b>复刻要点：</b>①「确认规划」这一屏是产品灵魂——它把不可控的抽卡变成可审的稿件，务必做成<b>可逐字段编辑</b>，而不是只读预览。②分析结果必须是<b>严格 JSON</b>（<code>{design_specs, images:[{title,description,design_content,product_index,aspect_ratio}]}</code>），前端要能容错（先试 <code>JSON.parse</code>，失败再抓 <code>{...}</code>/<code>[...]</code> 片段，再失败就把原文当 design_specs 直接展示）。③把"消耗 N 积分"写在确认按钮上，转化率与投诉率都会更好。</div>
+
+  <h3>3.2 风格复刻 + SKU 替换 —— 商业化最强的一环</h3>
+  <p>三个 tab 共享同一套上传区（参考图 + 产品图），差异在"分析器"和"输出组织方式"：</p>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Tab</th><th>输入</th><th>行为</th><th>输出</th></tr></thead>
+    <tbody>
+      <tr><td>单图复刻</td><td>1 参考图 + 1 产品图 + 特殊需求</td><td>提取参考图设计语言，套到产品上</td><td>N 张同风格图</td></tr>
+      <tr><td>批量复刻</td><td>多参考图 × 多产品图</td><td>按组配对，批量提交</td><td>按组分组展示</td></tr>
+      <tr><td>SKU 替换</td><td>1 参考图 + ≤20 张 SKU 图（每张可填颜色/尺码/规格）</td><td><b>只换主体与产品名称，背景、构图、排版、字体全部保留</b></td><td>按 SKU 1..N 分组，全部下载</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>SKU 替换下面还挂三种分析器，这是它真正的技术分层：</p>
+  <ul>
+    <li><b>智能替换</b>：整图理解后重新生成，一致性最好、成本最高。</li>
+    <li><b>局部替换</b>：先定位产品在参考图中的位置与尺度，只重绘该区域，其余像素保持——最省积分，也最容易露馅（边缘、投影）。</li>
+    <li><b>多场景替换</b>：一次任务喂多个场景，输出多场景成套。</li>
+  </ul>
+  <blockquote><b>隐藏机制：</b>"专家模式"另有一套分析模型（<code>expert_analysis_credit_cost</code>），<b>按每个新分析任务收费，成功分析结果复用不重复收费</b>。这条规则很重要——它把"分析"当资产缓存，而不是每次重算，既省钱又提升一致性。</blockquote>
+  <div class="win"><b>复刻要点：</b>SKU 场景的正确解法不是"让模型自己保持一致"，而是 <b>参考图锁定 + 区域掩膜 + 提示词只描述变量</b>。要单独建一张 <code>sku_items</code> 表存每个 SKU 的参数文本，生成时拼进 <code>特殊需求</code> 段，而不是让用户写一段长 prompt。</div>
+
+  <h3>3.3 服装组图 —— 最复杂、也最能拉开差距</h3>
+  <p>链路比商品图长一层：<b>统一分析 → 策略选择 → 分镜/套图 → 逐镜生成</b>。</p>
+  <ul>
+    <li><b>统一分析</b>：解析版型、面料、工艺细节、色彩，产出一份"服装统一分析"（中英双版提示词）。</li>
+    <li><b>策略</b>：品牌大片（棚拍、硬光、杂志感）或 手机网感（生活化、随手拍、UGC 感）——两条完全不同的提示词路径。</li>
+    <li><b>套图类型</b>：模特试穿、白底图、人台图、3D 立体图、细节特写、卖点图、三视图（有参考人物 / 无参考人物两套生成器）。</li>
+    <li><b>模特</b>：模特描述生成 → 三视图模特图 → 与服装合成。场景侧有「场景推荐」+「场景生图」+ 场地历史库（<code>clothing_scene_history</code>）。</li>
+  </ul>
+  <p>逐镜提示词的拼装顺序（逆向出的骨架，几乎可以直接用）：</p>
+  <pre><span class="c">// 每一张图的最终 prompt</span>
+【核心指令】目标输出语言：{targetLangName}。
+【整体设计规范】{designSpecs}
+【本镜：{shot.title}】{shot.description}
+{shot.markdownContent}
+
+<span class="c">// 然后追加 5 条一致性锁</span>
+modelIdentityLock   <span class="c">// 模特身份只来自参考图，不得漂移</span>
+fullOutfitLock      <span class="c">// 整套服装（含配饰）不得增删改</span>
+sceneLock           <span class="c">// 场景一致性（有场景参考图时）</span>
+photorealism        <span class="c">// 真实感约束</span>
+finalIdentityReminder <span class="c">// 结尾再强调一次：出现的人只是"衣架"，脸不属于输出</span></pre>
+  <div class="note"><b>最后那条是本方案里最聪明的一处工程细节：</b>他们把"人脸身份"和"服装身份"显式解耦，并在提示词<b>末尾</b>再重复一次（模型对结尾指令的服从度更高）。做虚拟试衣时，这一条能显著降低"换了个模特"的投诉。</div>
+
+  <h3>3.4 图片精修 / 批量抠图 / 批量翻译</h3>
+  <div class="grid g2">
+    <div class="card"><h5>图片精修</h5><p><b>双分析器</b>：<code>精修分析-GPT Image 2</code> 与 <code>精修分析-Nano Banana</code> 两套提示词，按所选模型走不同分析路径（不同模型对"瑕疵"的理解不一样）。分析产出逐图精修指令，再批量执行。附带"去精修获得白底图"——白底图是 SKU 替换与批量抠图的输入端。</p></div>
+    <div class="card"><h5>批量抠图</h5><p>走火山 veImageX，不走生成模型（快且便宜）。计费单位是<b>「每积分成功次数」</b>而不是"每张积分"，失败不扣——这是对用户体验更友好的计价方式，也避免了"扣了钱没结果"的退款工单。</p></div>
+  </div>
+  <p><b>批量翻译</b>是唯一"非生成"的视觉任务：千问 OCR 抽字（独立 QPS 队列，配 0 即关闭该能力）→ LLM 翻译 → 在原文字框内重绘。难点全在<b>版式还原</b>：字号要按原框宽度自适应，长英文必须缩字号或换行，否则一定溢出。复刻时给它单列一条"文字排版约束"提示词，不要塞进通用模板。</p>
+
+  <h3>3.5 万能画布 —— 决定留存的那块板</h3>
+  <p>纯前端（fabric.js）+ 少量服务端能力。功能密度全站最高：</p>
+  <div class="grid g3">
+    <div class="card"><h5>图层系统</h5><p>图层树、多选、打组/解组、锁定、层级上移下移置顶置底、对齐、拖拽缩放旋转、画布缩放/小地图/取色。</p></div>
+    <div class="card"><h5>智能分层</h5><p>1.0 = 图像分割；2.0 = 区域框选 / 智能识别 / 自然语言描述主体。按<b>层</b>计费，提交时按"最大层数 × 单价"预占，完成后按实际层数多退少补。</p></div>
+    <div class="card"><h5>文字工具</h5><p>字体库（思源黑/宋、阿里普惠体、仓耳系列、站酷系列）、字号、字距、行高、对齐、颜色、描边、字符面板。</p></div>
+    <div class="card"><h5>AI 编辑</h5><p>去背景、分割图片、裁剪、画笔、框选标注（矩形/箭头/文字/自由画笔）。</p></div>
+    <div class="card"><h5>反推提示词</h5><p>把画布上的图反解成提示词，接着改（<code>canvas_reverse_prompt_credit_cost</code>）。</p></div>
+    <div class="card"><h5>导出</h5><p>PNG 导出、打包下载、<b>PSD 导出</b>（自研 8BPS 写入，保留图层）、合并图层后导出。</p></div>
+  </div>
+
+  <h4>标注 → 提示词的转换（这是"局部重绘"的关键实现）</h4>
+  <p>用户在图上画框/箭头/写字，系统不截图给模型，而是把标注序列化成<b>归一化坐标文本</b>注入 prompt：</p>
+  <pre>[图片标注说明] 第 1 张参考图为无标注的原始商品图，是生成主体。
+第 2 张参考图（若提供）仅用于理解标注的空间位置；其中的线条、矩形框、
+箭头与文字是编辑指令，严禁出现在最终商品图中。
+坐标均为相对原图宽高的归一化值（0–1），原点左上。
+标注1 矩形 [x=0.312, y=0.488, w=0.221, h=0.164]：标记需修改或关注的区域（框线不是商品图案）。
+标注2 文字「把背景换成米白色」位于 (0.500, 0.820)：该文字是编辑指令，不要当作商品上原有的印刷文案渲染。</pre>
+  <div class="win"><b>复刻要点：</b>既传"原图"又传"带标注的合成图"两张参考，并在提示词里<b>显式声明哪张是主体、线条不是图案</b>。少了这句，模型十次有三次会把红框画进图里。</div>
+
+  <h3>3.6 视频工坊 —— 图片能力的延展，不是新品类</h3>
+  <div class="tl">
+    <div class="step"><b><em>01</em>脚本</b><span>输入商品信息 → 脚本解析（<code>canvas_parse_script_credit_cost</code>，0 = 免费）→ 生成多条文字分镜方案。</span></div>
+    <div class="step"><b><em>02</em>分镜</b><span>选一套分镜方案，逐镜生成画面；<b>多宫格分镜</b>会把多镜合成一张带序号的标记图再送回模型，用来保持镜头间的连续性（合成失败会回退发无标记原图，并在日志里说明"识别准度会下降"）。</span></div>
+    <div class="step"><b><em>03</em>生成</b><span>Seedance 2.0：首帧模式（1 张）/ 首尾帧模式（2 张）/ 全能参考；按 模型 × 分辨率 × 秒 计费，参考视频另计 <code>reference_video_credits_per_sec</code>。</span></div>
+    <div class="step"><b><em>04</em>后处理</b><span>去字幕（仅 Seedance 产物）、一键高清（按分钟计费，四舍五入且至少 1 积分）、回调 <code>video-seedance-callback</code> 异步落库。</span></div>
+  </div>
+  <p>工程上有两处值得抄：① <b>原始视频链接 24 小时过期</b>，必须尽快转存到自有 OSS，否则用户第二天回来看到的是空图；② 视频时长、并发、任务硬超时（1800 秒上限）全部在后台可配，不在前端写死。</p>
+
+  <h3>3.7 账户、积分与支付</h3>
+  <ul>
+    <li><b>登录</b>：邮箱密码 / 手机号验证码（仅国内站）/ 微信扫码 / 快速登录 / 企微绑定（绑定送积分）/ 邀请码门控（可强制）。人机验证走网易易盾 + 阿里云验证码 2.0 双通道。</li>
+    <li><b>积分三类</b>：购买（永久）/ 订阅（永久）/ 赠送。扣减用 <code>deduct_credits_with_priority</code> 按优先级顺序扣，避免"赠送积分永不过期而付费积分先过期"这类账务坑。</li>
+    <li><b>预占-结算</b>：提交时预占（按最大可能消耗），完成时按实际结算，多退少补；失败释放预占；超时强制取消并退款。</li>
+    <li><b>支付</b>：支付宝直连、付呗（订阅周期扣款/分期）、易宝聚合（微信+支付宝）、可配微信小程序内唤起。支付成功靠 <b>Supabase Realtime 监听 <code>credit_purchases</code> 行变更 + 15 分钟轮询兜底（间隔 3s 起、×1.5 指数退避、上限 15s）</b> 双保险。</li>
+    <li><b>子账号</b>：主账号可开子账号、分配/回收积分、设备注、看团队工作流；代理商体系单独一套角色。</li>
+  </ul>
+
+  <h3>3.8 后台：一个"什么都能改"的配置中枢</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>分区</th><th>能改什么</th><th>为什么重要</th></tr></thead>
+    <tbody>
+      <tr><td>提示词</td><td>约 40 组模板，按 key 编辑，带版本历史、diff 逐行对比、回滚、区域/语言分支、生效开关</td><td>唯一能"改效果不改代码"的地方</td></tr>
+      <tr><td>积分配置</td><td>模型 × 速度档 × 分辨率 的价格矩阵；视频按秒；分层按层；AI 帮写 / 去背景 / 反推 / 解析脚本 / 专家分析 单点定价；每日登录/注册/企微绑定/邀请奖励；限时优惠</td><td>成本调价的唯一入口</td></tr>
+      <tr><td>AI 服务</td><td>Provider 实例（Endpoint / Key / 模型名 / 区域 / 并发），模型目录，路由规则（v1 单链路降级 / v2 主链+兜底，合计最多 4 次重试），权重分流（<code>provider:权重</code>），路由版本历史与回滚</td><td>可用性与成本的生命线</td></tr>
+      <tr><td>监控告警</td><td>Provider 健康树、错误分类、生图/视频均时、优化建议、告警历史、视频今日累计 / 最近 15 分钟</td><td>出事时能定位到"某供应商某模型某档位"</td></tr>
+      <tr><td>内容与合规</td><td>图片审核（输入）、文本审核、AIGC 标识、敏感词、违规回退提示词、图片所有权强校验开关</td><td>上架前提</td></tr>
+      <tr><td>运营</td><td>套餐、支付通道、限时优惠、公告、教程场景（多语言）、字体、企微客服池、SEO/区域检测、灰度白名单与采样率、OEM 品牌</td><td>不用发版就能做活动</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note"><b>架构启示：</b>他们把「自定义模块」做成了数据：<code>custom_modules_visibility</code> + <code>custom_module_prompt_{detail|main}_{domestic|intl|aplus}</code>，后台勾选即上架某个详情图模块、写子提示词即改行为。<b>新功能 ≈ 新配置，不是新代码。</b>复刻时第一天就要把这条通道留出来，否则第 5 个功能开始就会失控。</div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section id="s4">
+  <h2><span class="num">04</span>技术架构还原</h2>
+  <p class="lede">他们的选择非常"小团队"：前端纯静态，后端几乎全部交给 Supabase，模型层自己做多供应商路由。这套组合让 3–5 人团队能维护十几个业务模块。</p>
+
+  <h3>4.1 还原出的真实拓扑</h3>
+  <figure>
+  <svg viewBox="0 0 900 400" width="100%" role="img" aria-label="PicsetAI 架构拓扑还原">
+    <defs>
+      <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#a89f95"/>
+      </marker>
+    </defs>
+    <g font-family="-apple-system,PingFang SC,sans-serif" font-size="11.5" fill="#3d3833">
+      <!-- client -->
+      <rect x="24" y="26" width="196" height="112" rx="10" fill="#fffdfa" stroke="#e5dfd6"/>
+      <text x="38" y="48" font-weight="700" font-size="12">浏览器 / 移动端</text>
+      <text x="38" y="68" fill="#7c746c" font-size="10.8">React + Vite + Tailwind</text>
+      <text x="38" y="84" fill="#7c746c" font-size="10.8">radix / react-query / fabric.js</text>
+      <text x="38" y="100" fill="#7c746c" font-size="10.8">i18next（中 / 英 / 日 / 繁）</text>
+      <text x="38" y="120" fill="#b8451f" font-size="10.5">品牌配置注入 VITE_BRAND_*</text>
+
+      <!-- nginx -->
+      <rect x="268" y="26" width="150" height="112" rx="10" fill="#fffdfa" stroke="#e5dfd6"/>
+      <text x="282" y="48" font-weight="700" font-size="12">nginx</text>
+      <text x="282" y="68" fill="#7c746c" font-size="10.8">静态资源 / SPA 回退</text>
+      <text x="282" y="84" fill="#7c746c" font-size="10.8">/supabase → PostgREST</text>
+      <text x="282" y="100" fill="#7c746c" font-size="10.8">/functions/v1 → Edge</text>
+      <text x="282" y="120" fill="#7c746c" font-size="10.8">同域，无 CORS</text>
+
+      <!-- supabase -->
+      <rect x="462" y="26" width="238" height="238" rx="12" fill="#f4f7f6" stroke="#cfe3df"/>
+      <text x="478" y="48" font-weight="700" font-size="12" fill="#0f6b62">Supabase（自托管/同域）</text>
+      <rect x="478" y="60" width="206" height="26" rx="6" fill="#fffdfa" stroke="#dfe9e6"/>
+      <text x="488" y="77" font-size="10.5">Auth（邮箱 / 手机号 / 微信）</text>
+      <rect x="478" y="92" width="206" height="26" rx="6" fill="#fffdfa" stroke="#dfe9e6"/>
+      <text x="488" y="109" font-size="10.5">Postgres（23+ 张业务表 + RPC）</text>
+      <rect x="478" y="124" width="206" height="26" rx="6" fill="#fffdfa" stroke="#dfe9e6"/>
+      <text x="488" y="141" font-size="10.5">Storage（产物 / 快照）</text>
+      <rect x="478" y="156" width="206" height="26" rx="6" fill="#fffdfa" stroke="#dfe9e6"/>
+      <text x="488" y="173" font-size="10.5">Edge Functions（编排 / 回调）</text>
+      <rect x="478" y="188" width="206" height="26" rx="6" fill="#fffdfa" stroke="#dfe9e6"/>
+      <text x="488" y="205" font-size="10.5">Realtime（任务 / 支付进度）</text>
+      <rect x="478" y="220" width="206" height="26" rx="6" fill="#fffdfa" stroke="#dfe9e6"/>
+      <text x="488" y="237" font-size="10.5">pg_cron（每分钟推进队列）</text>
+
+      <!-- routing -->
+      <rect x="736" y="26" width="140" height="112" rx="10" fill="#fbeee7" stroke="#eccdbd"/>
+      <text x="750" y="48" font-weight="700" font-size="12" fill="#96351a">自建模型路由</text>
+      <text x="750" y="68" font-size="10.5" fill="#7c3a20">主链路 + 兜底链路</text>
+      <text x="750" y="84" font-size="10.5" fill="#7c3a20">权重分流 / 最多 4 次</text>
+      <text x="750" y="100" font-size="10.5" fill="#7c3a20">健康检查 / 错误分类</text>
+      <text x="750" y="120" font-size="10.5" fill="#7c3a20">按品牌屏蔽渠道</text>
+
+      <!-- providers -->
+      <rect x="736" y="164" width="140" height="100" rx="10" fill="#fffdfa" stroke="#e5dfd6"/>
+      <text x="750" y="184" font-weight="700" font-size="11.5">上游模型</text>
+      <text x="750" y="202" font-size="10.3" fill="#7c746c">Nano Banana 2.1 / Pro</text>
+      <text x="750" y="217" font-size="10.3" fill="#7c746c">GPT-Image-2 / 2.5</text>
+      <text x="750" y="232" font-size="10.3" fill="#7c746c">Seedance 2.0 · 可灵 3.0</text>
+      <text x="750" y="247" font-size="10.3" fill="#7c746c">万相 3.0 · Gemini 3.x</text>
+
+      <!-- oss / third -->
+      <rect x="268" y="180" width="150" height="84" rx="10" fill="#fffdfa" stroke="#e5dfd6"/>
+      <text x="282" y="200" font-weight="700" font-size="11.5">阿里云</text>
+      <text x="282" y="218" font-size="10.3" fill="#7c746c">OSS + CDN</text>
+      <text x="282" y="233" font-size="10.3" fill="#7c746c">内容审核（图/文）</text>
+      <text x="282" y="248" font-size="10.3" fill="#7c746c">验证码 2.0 · 商品分割</text>
+
+      <rect x="24" y="180" width="196" height="84" rx="10" fill="#fffdfa" stroke="#e5dfd6"/>
+      <text x="38" y="200" font-weight="700" font-size="11.5">第三方</text>
+      <text x="38" y="218" font-size="10.3" fill="#7c746c">支付宝 / 付呗 / 易宝</text>
+      <text x="38" y="233" font-size="10.3" fill="#7c746c">企业微信（客服/群发/标签）</text>
+      <text x="38" y="248" font-size="10.3" fill="#7c746c">网易易盾 · 火山 veImageX</text>
+
+      <!-- arrows -->
+      <line x1="220" y1="82" x2="264" y2="82" stroke="#a89f95" stroke-width="1.2" marker-end="url(#ar)"/>
+      <line x1="418" y1="82" x2="458" y2="82" stroke="#a89f95" stroke-width="1.2" marker-end="url(#ar)"/>
+      <line x1="700" y1="120" x2="734" y2="120" stroke="#a89f95" stroke-width="1.2" marker-end="url(#ar)"/>
+      <line x1="806" y1="138" x2="806" y2="160" stroke="#a89f95" stroke-width="1.2" marker-end="url(#ar)"/>
+      <line x1="462" y1="222" x2="422" y2="222" stroke="#a89f95" stroke-width="1.2" marker-end="url(#ar)"/>
+      <text x="196" y="285" text-anchor="middle" font-size="9.5" fill="#a89f95">外部依赖（服务端 / 客户端混合调用）</text>
+
+      <!-- flow strip -->
+      <rect x="24" y="300" width="852" height="74" rx="10" fill="#fffdfa" stroke="#e5dfd6"/>
+      <text x="40" y="322" font-weight="700" font-size="12">一次生成的完整旅程</text>
+      <text x="40" y="344" font-size="10.8" fill="#3d3833">提交（预占积分）→ 建 job（client_job_id 幂等）→ Edge 调 LLM 出规划 → 用户确认 → 逐张分发到路由 →</text>
+      <text x="40" y="361" font-size="10.8" fill="#3d3833">上游返回 → 转存 OSS → 写 generations → Realtime 推送 → 结算（多退少补）→ 画布可编辑 / 打包下载</text>
+    </g>
+  </svg>
+  <figcaption>图 1：从构建产物与接口命名还原的拓扑（<code>/supabase</code>、<code>/functions/v1/*</code>、<code>postgres_changes</code>、<code>pg_cron</code> 均为实测证据）</figcaption>
+  </figure>
+
+  <h3>4.2 照搬 Supabase 还是自建？</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>维度</th><th>A. Supabase 路线（贴近原产品）</th><th>B. 自建路线（FastAPI + PG + Redis）</th></tr></thead>
+    <tbody>
+      <tr><td>首版速度</td><td><b>快 2–3 周</b>：Auth / Storage / Realtime / RLS 全免写</td><td>慢，登录、文件、权限都要写</td></tr>
+      <tr><td>国内合规</td><td>需自托管在境内；官方云在香港/新加坡，数据出境要评估</td><td><b>天然可控</b>，日志与数据都在自己机房</td></tr>
+      <tr><td>长任务</td><td>Edge Function 有执行时长上限，批量任务必须拆成"队列表 + cron 轮询"</td><td><b>原生支持</b> Celery/BullMQ，重试/延迟/优先级都现成</td></tr>
+      <tr><td>成本</td><td>按量，冷启动与连接池在高峰期会咬人</td><td>固定成本，压测友好</td></tr>
+      <tr><td>权限模型</td><td>RLS 很强，但复杂业务要写大量 policy</td><td>应用层清晰，好审计</td></tr>
+      <tr><td>适合</td><td>3–5 人团队、先验证 PMF、跨境站</td><td>要长跑、要私有化交付、要接自家客服/CRM</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="win"><b>建议：</b>国内主站走 <b>B</b>（FastAPI + Postgres + Redis + OSS + Next.js），理由是国内支付/审核/备案/数据合规全都要求自控；同时把「任务执行器」抽象成独立服务，将来换 Supabase 或换云厂商都不动业务代码。<b>如果目标是 2 个月内上线验证，先按 A 做，但把 job 表和任务执行器设计成可迁移的。</b></div>
+
+  <h3>4.3 三个必须自研的部件</h3>
+  <ol>
+    <li><b>模型路由层</b>：统一入参（模型逻辑名 / 档位 / 比例 / 清晰度 / 参考图数组），内部映射到不同上游的协议差异（Gemini 原生 vs OpenAI 兼容 vs 火山方舟），带权重分流、失败降级、错误分类、耗时与成本埋点。</li>
+    <li><b>提示词编译层</b>：模板 + 变量 + 池 + 区域/语言分支 → 最终 prompt。必须是纯函数、可单测、可 diff。</li>
+    <li><b>积分账本</b>：预占 → 结算 → 退款三段式，全部走数据库事务 + 幂等键，任何"扣了钱没出图"都是灾难。</li>
+  </ol>
+</section>
+
+<!-- ============ 5 ============ -->
+<section id="s5">
+  <h2><span class="num">05</span>数据模型</h2>
+  <p class="lede">从接口命名与字段使用反推出 12 张核心表。下面是可以直接开写的骨架（Postgres，字段名对齐原产品的语义）。</p>
+
+  <pre><span class="c">-- 用户与账户</span>
+<span class="k">create table</span> profiles (
+  id uuid primary key,                 <span class="c">-- = auth.users.id</span>
+  email text, phone text, nickname text, avatar_url text,
+  brand_slug text default 'default',   <span class="c">-- 白标站点归属</span>
+  parent_user_id uuid references profiles(id),  <span class="c">-- 子账号</span>
+  wecom_userid text,                   <span class="c">-- 企微绑定</span>
+  created_at timestamptz default now()
+);
+
+<span class="c">-- 项目：一次创作 = 一个 project，聚合所有产物</span>
+<span class="k">create table</span> projects (
+  id uuid primary key,
+  user_id uuid references profiles(id),
+  mode text not null,        <span class="c">-- genesis | style_replicate | sku_replace | clothing | refine | video | canvas</span>
+  title text, cover_url text,
+  entry_kind text,           <span class="c">-- 来源入口，用于埋点</span>
+  created_at timestamptz default now()
+);
+
+<span class="c">-- 任务：一次提交 = 一个 job（幂等靠 client_job_id）</span>
+<span class="k">create table</span> generation_jobs (
+  id uuid primary key,
+  project_id uuid references projects(id),
+  user_id uuid references profiles(id),
+  client_job_id text <span class="k">unique</span>,        <span class="c">-- 前端生成，防重复提交</span>
+  status text not null,      <span class="c">-- queued|analyzing|awaiting_confirm|generating|partial_failed|completed|failed|canceled|timeout</span>
+  model_id text, speed_mode text, image_size text, aspect_ratio text,
+  image_type text,           <span class="c">-- main | detail | ad | ...</span>
+  target_platform text, target_language text,
+  user_prompt text,
+  reference_images jsonb,    <span class="c">-- [{url, role, order}]</span>
+  design_specs text,         <span class="c">-- 整体设计规范（markdown）</span>
+  design_content jsonb,      <span class="c">-- 图片规划 JSON</span>
+  credits_reserved int default 0,
+  credits_settled int default 0,
+  error_code text, error_message text,
+  created_at timestamptz default now(), finished_at timestamptz
+);
+
+<span class="c">-- 产物：一个 job 出 N 张</span>
+<span class="k">create table</span> generations (
+  id uuid primary key,
+  job_id uuid references generation_jobs(id),
+  idx int, status text,      <span class="c">-- pending|generating|done|failed</span>
+  image_url text, thumb_url text,
+  width int, height int,
+  title text, subtitle text, design_content text,   <span class="c">-- 供画布二次编辑</span>
+  model_id text, provider_id text,
+  cost_credits int, upstream_cost_cents int,        <span class="c">-- 成本埋点</span>
+  retry_count int default 0,
+  created_at timestamptz default now()
+);
+
+<span class="c">-- 积分：账本化，任何变动都有行</span>
+<span class="k">create table</span> credit_ledger (
+  id bigserial primary key,
+  user_id uuid references profiles(id),
+  kind text,                 <span class="c">-- purchase|subscription|gift|consume|refund|adjust</span>
+  delta int not null,        <span class="c">-- 正负</span>
+  balance_after int,
+  ref_type text, ref_id text,  <span class="c">-- job / purchase / admin</span>
+  reason text, operator text,
+  created_at timestamptz default now()
+);
+<span class="k">create index</span> on credit_ledger(user_id, created_at desc);</pre>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>表</th><th>作用</th><th>易踩的坑</th></tr></thead>
+    <tbody>
+      <tr><td><code>credit_packages</code> / <code>credit_purchases</code></td><td>套餐定义与订单</td><td>订单状态要能覆盖 <code>pending/paid/refunded/expired</code>，并保留第三方流水号（对账）</td></tr>
+      <tr><td><code>prompt_templates</code></td><td>提示词键值 + 版本</td><td>不要覆盖写，每次保存插新版本行，<code>is_active</code> 标记</td></tr>
+      <tr><td><code>provider_routes</code></td><td>模型 → 供应商链 + 权重 + 兜底</td><td>要有 <code>version</code> 与"服务端新版本"冲突提示，避免多人同改</td></tr>
+      <tr><td><code>canvas_projects</code> + <code>canvas_snapshots</code></td><td>画布文档与快照</td><td>图层 JSON 会很大，压缩后存对象存储，表里只放指针</td></tr>
+      <tr><td><code>sku_items</code></td><td>SKU 参数（颜色/尺码/规格）</td><td>别塞进 prompt 文本，要结构化，才能批量替换与复用</td></tr>
+      <tr><td><code>provider_call_logs</code></td><td>每次上游调用</td><td>必须有 trace_id，才能把"用户投诉这张图"定位到"某供应商某次调用"</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 6 ============ -->
+<section id="s6">
+  <h2><span class="num">06</span>生成流水线</h2>
+  <p class="lede">这是复刻的核心工程量。看上去是"调 API 出图"，实际有 4 层状态、3 种重试、2 次计费、1 个确认闸门。</p>
+
+  <h3>6.1 状态机</h3>
+  <pre>queued ──▶ analyzing ──▶ awaiting_confirm ──▶ generating ──┬─▶ completed
+   │            │                 │                  │      ├─▶ partial_failed（单张失败，可单张重试）
+   │            │                 │                  │      └─▶ failed（全失败，释放预占）
+   └────────────┴─────────────────┴──────────────────┴─▶ canceled / timeout
+                                                        （1800s 硬超时）</pre>
+  <ul>
+    <li><b>预占发生在 queued</b>：先扣后跑，避免"跑完不付钱"；失败/取消/超时必须释放。</li>
+    <li><b>awaiting_confirm 是人工闸门</b>：需要前端心跳保活，超时自动取消并退款（否则用户关页面，任务挂在半空）。</li>
+    <li><b>partial_failed 不等于失败</b>：已出的图照常交付与结算，未出的单独退。这一条能把退款率拉低一个量级。</li>
+  </ul>
+
+  <h3>6.2 一次批量生成的时序</h3>
+  <ol>
+    <li>前端生成 <code>client_job_id</code>（UUID），调 <code>create-job</code>，服务端先做幂等判断。</li>
+    <li>事务内：查余额 → 预占 → 建 job → 返回 job_id + 预占积分。</li>
+    <li>执行器取任务：调 LLM（分析）→ 写 <code>design_specs</code> + <code>design_content</code> → 状态置 <code>awaiting_confirm</code>，Realtime 推送。</li>
+    <li>用户确认（可改任意字段）→ 状态置 <code>generating</code>。</li>
+    <li>按图片规划切 N 个子任务，进队列，按 <code>batch_concurrency</code> 并发；每个子任务：编译 prompt → 路由选供应商 → 调用 → 下载转存 OSS → 写 <code>generations</code> → 推送。</li>
+    <li>全部结束：按实际成功张数结算（多退少补），写 <code>credit_ledger</code>，状态定稿。</li>
+  </ol>
+  <div class="note"><b>三个必须做的防呆：</b>① 上游返回的临时链接 <b>必须立刻转存</b>（多数只活 24h）；② 单张重试要有上限（建议 2 次）且退避，否则一次故障能把余额烧穿；③ 结算时读的是「当前」价格表而不是提交时的快照——所以要在 job 里存一份价格快照，否则调价那天会算错账。</div>
+
+  <h3>6.3 一致性：三个可落地的技术手段</h3>
+  <div class="grid g3">
+    <div class="card"><h5>参考图编排</h5><p>固定语义顺序：第 1 张永远是"无标注原始商品图 = 生成主体"，第 2 张才是"带标注的编辑指令图"，并在 prompt 里显式声明。顺序错了，主体就会被参考图带跑。</p></div>
+    <div class="card"><h5>提示词锚定</h5><p>把"不可变"的部分（品牌色、LOGO、材质、型号文字）写成"硬约束段"，放在 prompt 首尾各一次；把"可变"的部分（场景、文案）写成占位符。</p></div>
+    <div class="card"><h5>出图后质检</h5><p>用视觉模型回读成品，比对"主体轮廓 / 关键文字 / 主色"三项，不达标自动重跑一次并记录。这是把废片率从 30% 压到 10% 的唯一办法。</p></div>
+  </div>
+</section>
+
+<!-- ============ 7 ============ -->
+<section id="s7">
+  <h2><span class="num">07</span>提示词资产体系</h2>
+  <p class="lede">这是最不像"代码"、但最决定成败的部分。他们把它做成了可运维的系统：模板 + 变量 + 池 + 分区域分支 + 版本回滚。</p>
+
+  <h3>7.1 三层结构</h3>
+  <pre><span class="c">第一层：骨架模板（决定结构）</span>
+电商/社交 · 整体规范模板
+  变量：{aspectRatioLine} {typeGoal} {requirement} {productSummaryLine}
+        {globalRulesLine} {copyBankLine} {fidelityLine} {multiImageDiffRule} {textRule}
+
+电商/社交 · 单张设计模板
+  变量：{role} {visual} {layout} {camera} {copyLine} {bodyQuality} {multiDrawSuffix}
+
+<span class="c">第二层：池（决定多样性，每行一项，按 index 轮播）</span>
+版式池：居中英雄构图 / 对角线景深 / 左右分栏 / 上图下文 / 多信息卡片 / 拼贴网格 …
+镜头池：正面平视商业摄影 / 45° 侧前方英雄位 / 冲击力近景 / 超近局部特写 / 低机位仰拍 …
+光线池：柔光棚拍 / 硬光强阴影 / 自然生活光 / 浅景深层次 / 前景遮挡层次 …
+文案池：标题参考 / 卖点参考 / 行动优惠参考（按品类分池）
+
+<span class="c">第三层：规则（决定不出错）</span>
+产品保真规则 · 多图差异规则 · 单张收尾规则 · 无文字纯视觉规则
+有目标语言时的文字要求 · 活动海报的文字克制规则 · 多语言排版约束</pre>
+
+  <h3>7.2 一条约束能省多少事</h3>
+  <p>抄一段他们写在模板里的规则结构（复刻时直接照这个粒度写）：</p>
+  <pre><span class="c">## 1. 产品保真</span>
+· 商品主体的形状、比例、颜色、材质纹理、LOGO、型号文字，必须与参考图完全一致。
+· 允许改变：环境、光线方向与强度、投影、背景、周围道具。
+· 禁止改变：商品结构、配件数量、包装上的文字内容。
+
+<span class="c">## 2. 多图差异</span>
+· 同一批 N 张图之间，构图、镜头、场景、文案必须至少 3 项不同。
+· 禁止把同一张构图换配色重复输出。
+
+<span class="c">## 3. 单张收尾</span>
+· 每张图必须自洽：有视觉重心、有留白、文字不压主体、无裁切错误。
+· 文字层级清晰：主标题 > 副标题 > 说明文字，字号比约 3 : 1.8 : 1。</pre>
+
+  <div class="win"><b>为什么要"版本 + diff + 回滚"：</b>提示词是会回归的。今天为 A 品类加的约束，明天会让 B 品类翻车。没有版本控制，你只能靠记忆和截图；有了它，一次调崩可以在 1 分钟内退回上一版。他们把 diff 做到了<b>逐行红绿对比 + 保存前确认</b>，这是工程团队该有的克制。</div>
+
+  <h3>7.3 测试集：比模板更重要</h3>
+  <p>建议第一天就建一个 <b>30 个 SKU × 5 个品类</b>的固定测试集（家居 / 服饰 / 3C / 美妆 / 食品），每次改提示词或换模型，跑一遍打分：主体保真、文字正确率、版式合规、可用率（人工 1–5 分）。没有这个，所有"效果优化"都是玄学。</p>
+</section>
+
+<!-- ============ 8 ============ -->
+<section id="s8">
+  <h2><span class="num">08</span>积分定价与成本</h2>
+  <p class="lede">这是最容易亏钱的地方。先把成本摆平，再谈定价。</p>
+
+  <h3>8.1 单张成本（2026-10 公开渠道实测价，含中转）</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>模型</th><th>对外名称（原站）</th><th>1K/2K 单张成本</th><th>适用</th></tr></thead>
+    <tbody>
+      <tr><td>nano-banana-lite</td><td>Nova 2.0 Lite</td><td>≈ ¥0.18</td><td>批量测款、白底图、草稿</td></tr>
+      <tr><td>nano-banana 2</td><td>Nova 2.0</td><td>≈ ¥0.34–0.50</td><td>主力出图</td></tr>
+      <tr><td>nano-banana 2.1</td><td>Nova 2.1</td><td>≈ ¥0.36–0.52</td><td>主力出图（文字更稳）</td></tr>
+      <tr><td>nano-banana pro</td><td>Nova Pro</td><td>≈ ¥0.48–0.86（2K 更高）</td><td>高客单、精细保真</td></tr>
+      <tr><td>gpt-image-2 (medium)</td><td>Nova IMG-2</td><td>≈ ¥0.37（4K 同价）</td><td>印刷级、4K 交付</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>8.2 反推他们的定价</h3>
+  <p>站内实测：<b>4 张 2K Pro 图 = 28 积分（原价 40）</b>；SKU 批量 4 张 = 20 积分（原价 32）。即 Pro 档约 <b>7–10 积分/张</b>。若按"10 积分 ≈ 1 元"的行业常见锚点，单张收入 ¥0.7–1.0，而 2K Pro 成本 ¥0.6–0.9 —— <b>毛利极薄，甚至为负</b>。</p>
+  <div class="bars">
+    <div class="bar"><span class="t">收入（7 积分/张）</span><span class="track"><span class="fill" style="width:70%"></span></span><span class="v">¥0.70</span></div>
+    <div class="bar"><span class="t">成本（2K Pro 中位）</span><span class="track"><span class="fill t" style="width:74%"></span></span><span class="v">¥0.74</span></div>
+    <div class="bar"><span class="t">成本（含 15% 废片重跑）</span><span class="track"><span class="fill t" style="width:86%"></span></span><span class="v">¥0.86</span></div>
+  </div>
+  <p style="font-size:12px;color:var(--muted);margin-top:-6px">口径说明：按"10 积分 = 1 元"折算（行业常见锚点，非官方公布值）。若不成立，看三条的相对比例即可——结论不变：Pro 档 2K 在 7 积分/张时基本不赚钱。</p>
+  <div class="note"><b>这不是定价错误，而是结构设计：</b>① 用 Lite 档做引流与批量，把毛利留在高客单套餐；② 限时优惠只给 Fast 档，本质是<b>引导用户选便宜的速度档</b>；③ 靠订阅预付改善现金流，而不是靠单张毛利；④ 真正的利润来自"用户出了 20 张只用 4 张"的沉没成本。</div>
+
+  <h3>8.3 建议的定价骨架（可调）</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>档位</th><th>积分/张</th><th>毛利预期</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td>Lite（0.5K–1K）</td><td>2–3</td><td>45%–60%</td><td>批量铺货、测款、白底</td></tr>
+      <tr><td>Standard 2.0/2.1（1K）</td><td>5–6</td><td>35%–45%</td><td>主力</td></tr>
+      <tr><td>Standard 2.0/2.1（2K）</td><td>8–10</td><td>30%–40%</td><td>主力高清</td></tr>
+      <tr><td>Pro / IMG-2（2K–4K）</td><td>14–18</td><td>25%–35%</td><td>高保真、印刷级</td></tr>
+      <tr><td>功能项</td><td>去背景 1 / AI 帮写 1 / 反推 2 / 解析脚本 2 / 专家分析 5</td><td>—</td><td>低成本高感知</td></tr>
+      <tr><td>视频</td><td>按秒：分辨率 × 模型档，参考视频另计</td><td>20%–30%</td><td>拉高客单</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><b>套餐梯度建议</b>：入门（¥39 / 400 积分）/ 专业（¥99 / 1200）/ 豪华（¥299 / 4000）/ 企业（¥999 / 15000 + 子账号 + API 额度）。核心不是"打折"，而是<b>让每档刚好不够用一次大促</b>。</p>
+
+  <h3>8.4 五个成本阀门（必须有）</h3>
+  <ul>
+    <li><b>并发上限</b>：单用户同时跑 3 个 job，超出排队。</li>
+    <li><b>失败不计费 + 自动退</b>：任何"扣了钱没出图"都会变成工单。</li>
+    <li><b>重试上限</b>：单张 2 次，且不退避到指数级不算完。</li>
+    <li><b>分析结果缓存</b>：同一参考图 + 同一需求的成功分析复用，不重复收专家分析费。</li>
+    <li><b>成本埋点</b>：每张图记 <code>upstream_cost_cents</code>，后台按模型/供应商/用户出毛利报表。没有这张表，你永远不知道钱漏在哪。</li>
+  </ul>
+</section>
+
+<!-- ============ 9 ============ -->
+<section id="s9">
+  <h2><span class="num">09</span>20 周落地路线图</h2>
+  <p class="lede">按"每个阶段结束都能给真实用户用"来切，不按技术分层切。人力假设：前端 2、后端 2、算法/提示词 1、设计 1（兼职）、产品 1（兼测试）。</p>
+
+  <div class="road">
+    <div class="phase">
+      <div class="ph">PHASE 0<small>W1–W2</small></div>
+      <div>
+        <h5>地基：能跑通一张图</h5>
+        <ul>
+          <li>账号体系（邮箱 + 验证码）、积分账本（预占/结算/退款三段式）、OSS 直传</li>
+          <li>任务框架：job 表 + 队列 + 状态机 + 幂等 + 单张重试</li>
+          <li>模型路由 v1（2 个供应商、1 个模型、1 个档位）</li>
+          <li>后台最小版：积分价格表 + 提示词键值编辑</li>
+        </ul>
+        <div class="dod">DoD：从上传到出图全链路可跑，扣费/退款账目对得上，压测 20 并发不丢任务。</div>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="ph">PHASE 1<small>W3–W6</small></div>
+      <div>
+        <h5>MVP：全品类商品图 + 最小画布</h5>
+        <ul>
+          <li>五步向导：输入 → 分析 → <b>规划确认（可编辑）</b> → 生成 → 完成</li>
+          <li>详情 16 / 主图 5 模块配置化；目标平台 12 个；比例/清晰度/数量/速度档</li>
+          <li>提示词编译层（模板 + 变量 + 3 个池）</li>
+          <li>画布最小版：图层拖拽 + 文字 + 导出 PNG（先不做分层与 PSD）</li>
+        </ul>
+        <div class="dod">DoD：内部 20 个真实商品跑一遍，可用率 ≥ 60%；平均单套耗时 &lt; 6 分钟。</div>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="ph">PHASE 2<small>W7–W10</small></div>
+      <div>
+        <h5>商业化：风格复刻 + SKU + 精修 + 抠图</h5>
+        <ul>
+          <li>风格复刻三 tab；SKU 智能/局部两种分析器（先不做多场景）</li>
+          <li>图片精修（单分析器）+ 白底图；批量抠图接第三方</li>
+          <li>套餐、支付（支付宝直连）、支付回调双保险、发票/退款流程</li>
+          <li>作品记录 + 批量下载 + 打包 zip</li>
+        </ul>
+        <div class="dod">DoD：能收到第一笔钱；支付成功率 ≥ 99%；SKU 20 张批量成功率 ≥ 90%。</div>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="ph">PHASE 3<small>W11–W15</small></div>
+      <div>
+        <h5>拉高上限：服装 + 视频 + 画布进阶</h5>
+        <ul>
+          <li>服装组图（统一分析 → 策略 → 分镜 → 5 条一致性锁）</li>
+          <li>视频工坊（脚本 → 分镜 → 生成 → 转存 → 去字幕）</li>
+          <li>画布：智能分层 1.0、去背景、标注改图、PSD 导出</li>
+          <li>买家秀 / 种草图 / 广告图（配置化模块，各 2 天）</li>
+        </ul>
+        <div class="dod">DoD：服装套图可用率 ≥ 55%；视频成片率 ≥ 70%；画布留存（次日回访编辑）≥ 25%。</div>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="ph">PHASE 4<small>W16–W20</small></div>
+      <div>
+        <h5>规模化：路由 v2 + 后台 + 分销 + API</h5>
+        <ul>
+          <li>路由 v2（主链 + 兜底、权重分流、4 次重试、健康树、错误分类）</li>
+          <li>后台全量：提示词版本/回滚、成本矩阵、监控告警、灰度、公告、教程</li>
+          <li>推广分销（邀请码、返佣、次月结算）、子账号与积分划拨</li>
+          <li>开放 API（API Key + 限流 + 文档 + 用量对账）</li>
+        </ul>
+        <div class="dod">DoD：单供应商故障时自动降级，用户无感；毛利报表可按模型/用户下钻。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><b>排期提醒：</b>上表是"功能可用"的节奏，不是"效果好"的节奏。真实情况是 Phase 1 结束时功能已完成 60%，但可用率只有 40%；剩下 20 周里有一半时间在做提示词迭代与测试集。<b>把提示词工程师当核心岗位招，不要当运营兼职。</b></div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <h2><span class="num">10</span>八个真难点与破解</h2>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>#</th><th>难点</th><th>表现</th><th>破解</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>商品保真</td><td>LOGO 变形、材质变塑料、配件多一个</td><td>参考图语义顺序 + 硬约束段首尾各一次 + 出图后视觉回读比对三项指标，不达标重跑</td></tr>
+      <tr><td>2</td><td>中文文字渲染</td><td>错字、糊字、繁体混入</td><td>文字不要交给生图模型"画"，改为<b>画布文字层</b>后置合成；生图时只留文字占位区域</td></tr>
+      <tr><td>3</td><td>多图一致性</td><td>一套 8 张像 8 个品牌</td><td>先定"整体设计规范"再逐张生成（他们的两阶段就是为此）；调色板/字体/光线写成规范段</td></tr>
+      <tr><td>4</td><td>规划 JSON 不稳定</td><td>模型输出带 markdown 包裹、字段缺失</td><td>强 schema + few-shot + 容错解析（parse→正则截取→降级纯文本）+ 失败重试 1 次</td></tr>
+      <tr><td>5</td><td>SKU 一致性</td><td>同款不同色，颜色串到别的 SKU</td><td>SKU 参数结构化；一次任务只换一个变量；局部替换用掩膜而不是整图重画</td></tr>
+      <tr><td>6</td><td>计费对账</td><td>超时、部分失败、重复提交导致多扣/少扣</td><td>三段式账本 + 幂等键 + 每个 job 存价格快照 + 每日自动对账任务</td></tr>
+      <tr><td>7</td><td>成本失控</td><td>一次故障重试烧掉一天利润</td><td>重试上限、并发上限、单用户日限额、失败退、成本埋点告警</td></tr>
+      <tr><td>8</td><td>画布工程复杂度</td><td>图层、文字、导出、撤销，越做越像 PS</td><td><b>克制</b>：只做"改字、换图、挪位置、导出"四件事；分层与 PSD 放 Phase 3</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <h2><span class="num">11</span>不要照抄的地方</h2>
+  <p class="lede">原产品有 13 个模块，是因为它要覆盖所有人的需求（也为了让 SEO 页更多）。你新做，抄全 = 每个都做不深。</p>
+
+  <div class="grid g2">
+    <div class="card"><h5>① 选一个垂类做深，而不是全品类</h5><p>家居、饰品、服装三个品类的"保真难点"完全不同。全品类意味着你的提示词要兼容一切，结果是谁都不够好。建议先锁 1–2 个品类，把可用率做到 75%+ 再扩。</p></div>
+    <div class="card"><h5>② 把"交付物"做厚</h5><p>原产品给的是图片。你可以给：平台尺寸包（一次导出淘宝 3:4 + 抖音 9:16 + 亚马逊 A+ 全套）、文案 CSV、可编辑 PSD、甚至详情页 HTML。同价位下这是最容易感知的差异。</p></div>
+    <div class="card"><h5>③ 用"一次成片率"做北极星，而不是"生成张数"</h5><p>张数是成本，成片率才是价值。把首页数字改成"你这次省了几次返工/几小时"，比"已生成 1 亿张"更有说服力。</p></div>
+    <div class="card"><h5>④ 不要做分销，先做口碑</h5><p>分销适合已有流量池的团队。冷启动阶段，返佣的钱不如投在"100 个种子卖家免费用 + 一对一出图"。他们的代理门槛是"转化 5 个付费用户"，说明这套是给已有渠道的人用的。</p></div>
+    <div class="card"><h5>⑤ 与既有系统打通是你的独有优势</h5><p>如果团队已有客服/CRM/订单系统，把"商品图生成"接进"上新流程"——运营在商品后台点一下，图就回来了。这是纯工具型产品做不到的护城河。</p></div>
+    <div class="card"><h5>⑥ 视频不要早做</h5><p>视频单价高、失败率高、审核严，且用户对"能看"的容忍度远低于图片。等图片业务跑正毛利、有稳定现金流再上。</p></div>
+  </div>
+
+  <h3>定位建议（一句话）</h3>
+  <blockquote>不做"又一个 AI 商品图工具"，做<b>「某品类的详情页生产线」</b>：上传一张实拍，输出一套可直接上架、可二次编辑、带平台尺寸与合规检查的完整素材包。<br><small>差异点不在模型（大家都能调），在于"这个品类的知识"——什么角度显质感、什么文案能过审、什么比例不被限流。</small></blockquote>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <h2><span class="num">12</span>合规与风险清单</h2>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>项</th><th>要求</th><th>落地动作</th></tr></thead>
+    <tbody>
+      <tr><td>ICP 备案</td><td>经营性网站需备案（原站：浙ICP备2025168722号-2）</td><td>主体资质、域名实名、备案前置审批（如涉及）</td></tr>
+      <tr><td>AIGC 标识</td><td>《人工智能生成合成内容标识办法》要求显式+隐式标识</td><td>导出图片写入元数据水印 + 角落可见标识（后台可配位置/透明度/文案）</td></tr>
+      <tr><td>内容审核</td><td>输入（用户上传图/文案）与输出（生成图）双向审核</td><td>接阿里云/腾讯云内容安全；命中即拦截并退积分；保留审核记录与申诉入口</td></tr>
+      <tr><td>肖像权 / 模特</td><td>AI 生成人像涉及真实人物相似度</td><td>模特库只用授权素材；提示词禁止"生成某明星/网红"；用户上传人物图需勾选授权承诺</td></tr>
+      <tr><td>版权与所有权</td><td>生成物归属需在协议里写清</td><td>明确"生成结果归用户，平台不主张权利；用户对上传素材的合法性负责"</td></tr>
+      <tr><td>虚拟商品退款</td><td>积分/套餐属虚拟商品</td><td>明示"已消耗积分不退"，未消耗可退；失败自动退；保留人工通道</td></tr>
+      <tr><td>广告法</td><td>生成文案可能含"最""第一""国家级"</td><td>文案池预置合规词库 + 生成后敏感词扫描 + 提醒用户自检（工具不背锅但要提示）</td></tr>
+      <tr><td>数据安全</td><td>用户商品图是商业机密</td><td>不用于训练（写进隐私政策并技术隔离）、OSS 私有读 + 签名 URL、可配置保留期自动清理</td></tr>
+      <tr><td>跨境数据</td><td>国际站涉及出境</td><td>国内外双站分离部署，跨境走独立主体与独立存储</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note"><b>一个容易被忽略的点：</b>用户上传的"爆款参考图"往往是别人的详情页。<b>风格复刻功能天然带侵权风险</b>。产品上要做两件事：① 协议里明确"参考图需用户保证有权使用"；② 技术上将"复刻"限定为"版式/配色/构图语言"，而不是"复刻品牌 LOGO 与原创插画"——提示词里要显式排除品牌元素。</div>
+</section>
+
+<!-- ============ 附录 A ============ -->
+<section id="a1">
+  <h2><span class="num">A</span>附录：功能复刻清单</h2>
+  <p class="lede">可直接当需求池用。勾选 = 建议进 MVP。</p>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>模块</th><th>功能点</th><th>MVP</th><th>备注</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="8">全品类商品图</td><td>多图上传（≤6）+ 尺寸校验 + HEIC 支持</td><td>✓</td><td>前端压缩后再传</td></tr>
+      <tr><td>主图 / 详情图切换</td><td>✓</td><td>两套模块池</td></tr>
+      <tr><td>目标平台选择（12+）</td><td>✓</td><td>映射到比例 + 规范提示词</td></tr>
+      <tr><td>自然语言需求 + AI 帮写</td><td>✓</td><td>帮写单独计费</td></tr>
+      <tr><td>目标语言（含无文字）</td><td>✓</td><td>影响文字规则分支</td></tr>
+      <tr><td>模型 / 比例 / 清晰度 / 数量 / 速度档</td><td>✓</td><td>价格实时计算</td></tr>
+      <tr><td>设计规范 + 图片规划可编辑确认</td><td>✓</td><td>核心体验</td></tr>
+      <tr><td>二次编辑进画布 / 批量下载</td><td>✓</td><td></td></tr>
+      <tr><td rowspan="6">风格复刻</td><td>单图复刻</td><td>✓</td><td></td></tr>
+      <tr><td>批量复刻（多参考 × 多产品）</td><td>✓</td><td></td></tr>
+      <tr><td>SKU 替换（≤20 张，逐张填参数）</td><td>✓</td><td>结构化 sku_items</td></tr>
+      <tr><td>SKU 智能 / 局部 / 多场景 三种分析器</td><td>局部</td><td>多场景后置</td></tr>
+      <tr><td>专家模式（更强分析模型）</td><td></td><td>可复用分析结果</td></tr>
+      <tr><td>元素级替换（只换某元素）</td><td></td><td>Phase 3</td></tr>
+      <tr><td rowspan="5">万能画布</td><td>图层拖拽 / 缩放 / 旋转 / 层级 / 打组</td><td>✓</td><td>fabric.js</td></tr>
+      <tr><td>文字图层 + 字体库</td><td>✓</td><td>先用 3 款开源中文字体</td></tr>
+      <tr><td>去背景 / 裁剪 / 画笔</td><td>部分</td><td></td></tr>
+      <tr><td>智能分层（按层计费 + 预占结算）</td><td></td><td>Phase 3</td></tr>
+      <tr><td>PSD 导出 / 工作流节点 / 灵感库</td><td></td><td>Phase 4+</td></tr>
+      <tr><td rowspan="4">后台</td><td>提示词键值 + 版本 + 回滚</td><td>✓</td><td>第一天就要有</td></tr>
+      <tr><td>积分成本矩阵（模型×速度×分辨率）</td><td>✓</td><td></td></tr>
+      <tr><td>Provider 路由 + 降级 + 健康</td><td>v1</td><td>v2 放 Phase 4</td></tr>
+      <tr><td>灰度 / 公告 / 教程 / 字体 / OEM 品牌</td><td></td><td>按需</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 附录 B ============ -->
+<section id="a2">
+  <h2><span class="num">B</span>附录：验收用例</h2>
+  <ol>
+    <li><b>重复提交</b>：同一 <code>client_job_id</code> 连点 5 次，只生成 1 个 job、只扣 1 次积分。</li>
+    <li><b>分析失败</b>：LLM 返回非 JSON / 超时，前端展示可重试态，预占积分全额释放。</li>
+    <li><b>确认页超时</b>：停在"确认规划"10 分钟不回，任务自动取消并退款。</li>
+    <li><b>部分失败</b>：4 张里 1 张失败，交付 3 张、按 3 张结算、单张可重试。</li>
+    <li><b>供应商故障</b>：主链路 500，自动切兜底链路，用户侧只见"稍慢"，最终成功。</li>
+    <li><b>产物过期</b>：24 小时后回看历史，图片仍可访问（已转存自有存储）。</li>
+    <li><b>调价</b>：提交时 A 价、完成时已调为 B 价，按 A 价结算（job 存价格快照）。</li>
+    <li><b>审核命中</b>：上传违规图，前端明确提示、积分退回、日志可查。</li>
+    <li><b>SKU 20 张</b>：全部成功；结果按 SKU 分组；打包下载 zip 命名规则正确。</li>
+    <li><b>画布恢复</b>：刷新页面后图层、位置、文字内容完整恢复（快照可用）。</li>
+  </ol>
+
+  <div class="win" style="margin-top:28px"><b>下一步建议（三选一）：</b><br>
+  ① 我把 Phase 0–1 拆成可执行的任务清单 + 建表 SQL + 提示词初版骨架，直接开工；<br>
+  ② 先做一个 <b>单页 Demo</b>（上传 → 分析 → 确认规划 → 出 4 张），用真实模型验证"一次成片率"，2 天内能看效果；<br>
+  ③ 先做 <b>成本与定价测算表</b>（Excel），把套餐、毛利、盈亏平衡点算清再决定要不要做。</div>
+</section>
+
+<footer>
+  <p>本方案基于 2026-11-08 对 picsetai.cn 的公开页面、前端构建产物（<code>index-*.js</code> 8.5 MB）与公开资料的交叉分析。文中「还原」「逆向」结论为技术推断，可能与真实实现存在差异；成本数字取自公开渠道实测价，实际以采购协议为准。</p>
+  <p>配套文件：本页可直接打印为 PDF 用于内部评审。</p>
+</footer>
+
+</main>
+</div>
+</div>
+<div class="print-tip">⌘P 可导出 PDF</div>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var secs = links.map(function(a){ return document.querySelector(a.getAttribute('href')); }).filter(Boolean);
+  if(!secs.length) return;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){
+        links.forEach(function(l){ l.classList.remove('on'); });
+        var id = '#' + en.target.id;
+        var cur = links.filter(function(l){ return l.getAttribute('href') === id; })[0];
+        if(cur) cur.classList.add('on');
+      }
+    });
+  }, { rootMargin: '-10% 0px -75% 0px', threshold: 0 });
+  secs.forEach(function(s){ obs.observe(s); });
+})();
+</script>
+</body>
+</html>
